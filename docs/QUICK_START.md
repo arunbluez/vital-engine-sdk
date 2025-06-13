@@ -93,14 +93,7 @@ The SDK is designed for high performance:
 - ✅ 11.6ms average frame time
 - ✅ Efficient entity creation/destruction
 
-## 5. Next Steps
-
-- **Full Documentation**: See `docs/FRONTEND_INTEGRATION.md`
-- **Architecture Guide**: See `.claude/CLAUDE.md`
-- **Development Plan**: See `.claude/ACTION_PLAN.md`
-- **Testing Strategy**: See `.claude/TESTING.md`
-
-## 6. Example Game Loop with All Systems
+## 5. Example Game Loop with All Systems
 
 ```javascript
 import {
