@@ -17,6 +17,10 @@ A headless game engine SDK for building Survivor.io-style survival action games.
 - **TypeScript First**: Full type safety and excellent IDE support
 - **Deterministic**: Reproducible game states for debugging and replays
 
+https://github.com/user-attachments/assets/b7bcf389-6998-432d-a985-d624fd1cedbc.mp4
+
+_*test game developed using the sdk_
+
 ## Installation
 
 ```bash
