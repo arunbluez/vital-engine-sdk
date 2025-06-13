@@ -1,5 +1,11 @@
 # Vital Engine SDK
 
+[![npm version](https://img.shields.io/npm/v/vital-engine-sdk.svg)](https://www.npmjs.com/package/vital-engine-sdk)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D14-green.svg)](https://nodejs.org/)
+[![Test Coverage](https://img.shields.io/badge/coverage-0%25-red.svg)](https://github.com/arunbluez/vital-engine-sdk)
+
 A headless game engine SDK for building Survivor.io-style survival action games. This SDK provides pure game logic without any rendering or platform-specific dependencies.
 
 ## Features
@@ -16,6 +22,17 @@ A headless game engine SDK for building Survivor.io-style survival action games.
 ```bash
 npm install vital-engine-sdk
 ```
+
+## 📚 Documentation
+
+For detailed documentation, examples, and guides, visit our [Documentation](./docs/README.md).
+
+- [Quick Start Guide](./docs/QUICK_START.md)
+- [Architecture Overview](./docs/ARCHITECTURE_OVERVIEW.md)
+- [API Reference](./docs/API_REFERENCE.md)
+- [Game Development Guide](./docs/GAME_DEVELOPMENT_GUIDE.md)
+- [Frontend Integration](./docs/FRONTEND_INTEGRATION.md)
+- [TypeScript Examples](./docs/TYPESCRIPT_EXAMPLES.md)
 
 ## Quick Start
 
@@ -51,7 +68,7 @@ engine.getEvents().on('DAMAGE_DEALT', (event) => {
 })
 ```
 
-## Architecture
+## 🏗️ Architecture
 
 The SDK follows an Entity-Component-System (ECS) architecture:
 
@@ -61,10 +78,62 @@ The SDK follows an Entity-Component-System (ECS) architecture:
 - **World**: Manages all entities and systems
 - **Engine**: Orchestrates the game loop and provides the main API
 
-## Development Status
+## 🛠️ Tech Stack
 
-This SDK is currently in early development (v0.0.1). The core ECS architecture and event system are implemented. Additional game systems and features are being developed.
+- **Language**: TypeScript 5.3+
+- **Runtime**: Node.js 14+
+- **Build System**: Rollup
+- **Testing**: Jest with TypeScript support
+- **Code Quality**: ESLint + Prettier
+- **Package Format**: CommonJS, ESM, and TypeScript declarations
 
-## License
+### Key Technologies & Features
+
+- **Zero Dependencies**: No runtime dependencies for maximum performance
+- **Type Safety**: Full TypeScript support with strict typing
+- **Performance**: Optimized ECS implementation with spatial partitioning
+- **Memory Management**: Object pooling and efficient component storage
+- **Event System**: Decoupled communication between systems
+- **Deterministic**: Reproducible game states for debugging and replays
+
+## 🚀 Features in Development
+
+- [ ] Advanced AI behaviors
+- [ ] Procedural level generation
+- [ ] Multiplayer support
+- [ ] Save/Load system
+- [ ] Replay system
+- [ ] Advanced physics integration
+- [ ] More skill and weapon types
+- [ ] Boss encounters
+
+## 🧪 Testing
+
+```bash
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
+```
+
+## 📦 Building
+
+```bash
+# Build for production
+npm run build
+
+# Build in watch mode for development
+npm run dev
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
 
 MIT
