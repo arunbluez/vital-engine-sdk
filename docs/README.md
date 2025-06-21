@@ -153,29 +153,39 @@ world.eventSystem.emit('enemy_defeated', {
 
 ## Available Components
 
-- **Transform**: Position, rotation data
-- **Health**: Health and regeneration
-- **Movement**: Velocity and movement data
-- **Combat**: Damage and attack properties
-- **Skills**: Active and passive abilities
-- **Inventory**: Item storage and management
-- **EnemyAI**: AI behavior configuration
-- **Collectible**: Collectible item data
-- **Experience**: Level and XP tracking
-- **Spawner**: Entity spawning logic
-- **Magnet**: Magnetic collection behavior
-- **Difficulty**: Dynamic difficulty scaling
+### Core Components
+- **Transform**: Position, rotation, and scale data
+- **Health**: Health points, regeneration, and damage resistance
+- **Movement**: Velocity, acceleration, and movement constraints
+- **Combat**: Weapon stats, damage calculation, and targeting
+
+### Advanced Components (Phase 3)
+- **Skills**: Active and passive abilities with effects and cooldowns
+- **Inventory**: Item storage, stacking, and resource management
+- **Experience**: Level progression, XP tracking, and skill points
+- **AIComponent**: Advanced AI with state machines and behavior trees
+- **EnemyAIComponent**: Simplified enemy AI with behavior states
+- **CollectibleComponent**: Collectible items with magnetism and effects
+- **MagnetComponent**: Magnetic attraction for item collection
+- **SpawnerComponent**: Wave-based entity spawning with patterns
+- **DifficultyComponent**: Dynamic difficulty tracking and adjustment
 
 ## Available Systems
 
-- **MovementSystem**: Handles entity movement
-- **CombatSystem**: Manages combat interactions
-- **CollectionSystem**: Processes item collection
-- **EnemySystem**: AI behavior and pathfinding
-- **SkillSystem**: Skill activation and cooldowns
-- **ProgressionSystem**: Level and experience management
-- **EconomySystem**: Economy and trading
-- **DifficultySystem**: Dynamic difficulty adjustment
+### Core Systems
+- **MovementSystem**: Entity movement with collision detection
+- **CombatSystem**: Damage calculation, targeting, and projectiles
+- **ProgressionSystem**: Level progression and experience management
+- **EconomySystem**: Currency, trading, and resource management
+
+### Advanced Systems (Phase 3)
+- **SkillSystem**: Skill activation, effects, cooldowns, and evolution
+- **AISystem**: Advanced pathfinding (A*, Flow Field, Nav Mesh)
+- **CollectionSystem**: Item collection with magnetic attraction
+- **SimpleCollectionSystem**: Basic proximity-based collection
+- **EnemySystem**: Enemy AI behavior and group coordination
+- **SpawnSystem**: Wave-based spawning with patterns and timing
+- **DifficultySystem**: Adaptive difficulty with performance tracking
 
 ## Performance Features
 

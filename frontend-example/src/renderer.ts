@@ -106,4 +106,121 @@ export class Renderer {
         this.ctx.lineTo(x2, y2)
         this.ctx.stroke()
     }
+
+    drawRectangle(
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        color: string,
+        filled: boolean = true
+    ): void {
+        if (filled) {
+            this.ctx.fillStyle = color
+            this.ctx.fillRect(x, y, width, height)
+        } else {
+            this.ctx.strokeStyle = color
+            this.ctx.strokeRect(x, y, width, height)
+        }
+    }
+
+    drawPolygon(
+        points: { x: number; y: number }[],
+        color: string,
+        filled: boolean = true
+    ): void {
+        if (points.length < 3) return
+        
+        this.ctx.beginPath()
+        this.ctx.moveTo(points[0].x, points[0].y)
+        
+        for (let i = 1; i < points.length; i++) {
+            this.ctx.lineTo(points[i].x, points[i].y)
+        }
+        
+        this.ctx.closePath()
+        
+        if (filled) {
+            this.ctx.fillStyle = color
+            this.ctx.fill()
+        } else {
+            this.ctx.strokeStyle = color
+            this.ctx.stroke()
+        }
+    }
+
+    drawSkillIcon(
+        x: number,
+        y: number,
+        size: number,
+        skillType: string,
+        cooldownPercent: number = 0
+    ): void {
+        // Background
+        this.ctx.fillStyle = '#222'
+        this.ctx.fillRect(x - size/2, y - size/2, size, size)
+        
+        // Icon based on skill type
+        this.ctx.fillStyle = '#fff'
+        this.ctx.font = `${size * 0.6}px Arial`
+        this.ctx.textAlign = 'center'
+        this.ctx.textBaseline = 'middle'
+        
+        const icons: Record<string, string> = {
+            'area_blast': '💥',
+            'damage_boost': '⚔️',
+            'health_regeneration': '❤️',
+            'movement_speed': '🏃'
+        }
+        
+        this.ctx.fillText(icons[skillType] || '✨', x, y)
+        
+        // Cooldown overlay
+        if (cooldownPercent > 0) {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+            const cooldownHeight = size * cooldownPercent
+            this.ctx.fillRect(x - size/2, y - size/2, size, cooldownHeight)
+        }
+        
+        // Border
+        this.ctx.strokeStyle = '#666'
+        this.ctx.strokeRect(x - size/2, y - size/2, size, size)
+    }
+
+    drawWaveIndicator(
+        x: number,
+        y: number,
+        waveNumber: number,
+        progress: number
+    ): void {
+        this.ctx.font = 'bold 16px Arial'
+        this.ctx.fillStyle = '#ff0'
+        this.ctx.fillText(`Wave ${waveNumber}`, x, y)
+        
+        // Progress bar
+        const barWidth = 100
+        const barHeight = 6
+        const barY = y + 10
+        
+        this.ctx.fillStyle = '#333'
+        this.ctx.fillRect(x - barWidth/2, barY, barWidth, barHeight)
+        
+        this.ctx.fillStyle = '#ff0'
+        this.ctx.fillRect(x - barWidth/2, barY, barWidth * progress, barHeight)
+        
+        this.ctx.strokeStyle = '#666'
+        this.ctx.strokeRect(x - barWidth/2, barY, barWidth, barHeight)
+    }
+
+    drawParticle(
+        x: number,
+        y: number,
+        size: number,
+        color: string,
+        alpha: number = 1
+    ): void {
+        this.ctx.globalAlpha = alpha
+        this.drawCircle(x, y, size, color, true)
+        this.ctx.globalAlpha = 1
+    }
 }

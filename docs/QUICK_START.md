@@ -160,3 +160,139 @@ update()
 ```
 
 This creates a functional game with player, enemies, combat, progression, and economy systems all working together!
+
+## 6. Advanced Features (Phase 3)
+
+### Skills System
+
+```javascript
+import { SkillsComponent, SkillType, SkillEffectType, SkillSystem } from 'vital-engine-sdk'
+
+// Add skills system
+world.addSystem(new SkillSystem(world, {
+  baseEffectRadius: 150,
+  baseProjectileSpeed: 300,
+  evolutionCheckInterval: 5000,
+  maxActiveEffects: 10
+}))
+
+// Add skills to player
+const skills = new SkillsComponent()
+skills.addSkill({
+  id: 'fireball',
+  name: 'Fireball',
+  type: SkillType.ACTIVE,
+  targetType: SkillTargetType.PROJECTILE,
+  cooldown: 2000,
+  effects: [{
+    type: SkillEffectType.DAMAGE,
+    value: 50
+  }]
+})
+player.addComponent(skills)
+```
+
+### Enemy AI System
+
+```javascript
+import { EnemyAIComponent, AIBehaviorType, AIBehaviorState, AISystem } from 'vital-engine-sdk'
+
+// Add AI system with spatial partitioning
+const spatialGrid = new SpatialHashGrid({
+  cellSize: 100,
+  worldBounds: { minX: 0, minY: 0, maxX: 800, maxY: 600 }
+})
+world.addSystem(new AISystem(spatialGrid, {
+  pathfindingType: PathfindingType.A_STAR,
+  groupBehaviorEnabled: true
+}))
+
+// Add AI to enemies
+const ai = new EnemyAIComponent()
+ai.behaviorType = AIBehaviorType.AGGRESSIVE
+ai.targetEntityId = player.id
+enemy.addComponent(ai)
+```
+
+### Spawning System
+
+```javascript
+import { SpawnerComponent, SpawnPattern, SpawnSystem } from 'vital-engine-sdk'
+
+// Add spawn system
+world.addSystem(new SpawnSystem(spatialGrid))
+
+// Create spawner
+const spawner = world.createEntity()
+spawner.addComponent(new SpawnerComponent({
+  center: { x: 400, y: 300 },
+  radius: 300
+}))
+
+// Configure waves
+spawnerComp.waves = [{
+  id: 'wave1',
+  enemyTypes: ['basic_enemy'],
+  totalCount: 10,
+  spawnRate: 1,
+  pattern: SpawnPattern.CIRCLE,
+  area: { center: { x: 400, y: 300 }, radius: 300 },
+  delay: 5000
+}]
+```
+
+### Collection System
+
+```javascript
+import { CollectibleComponent, CollectibleType, MagnetComponent, CollectionSystem } from 'vital-engine-sdk'
+
+// Add collection system
+world.addSystem(new CollectionSystem())
+
+// Add magnet to player
+player.addComponent(new MagnetComponent())
+
+// Create collectibles
+const collectible = world.createEntity()
+collectible.addComponent(new TransformComponent(200, 200))
+collectible.addComponent(new CollectibleComponent(
+  CollectibleType.EXPERIENCE,
+  10 // value
+))
+```
+
+### Difficulty System
+
+```javascript
+import { DifficultyComponent, DifficultySystem } from 'vital-engine-sdk'
+
+// Add difficulty system
+world.addSystem(new DifficultySystem())
+
+// Add difficulty tracking to player
+player.addComponent(new DifficultyComponent())
+
+// System automatically adjusts difficulty based on:
+// - Player performance
+// - Survival time
+// - Enemy kill rate
+// - Collection efficiency
+```
+
+## 7. Complete Example with All Features
+
+Check out the `frontend-example` directory for a complete implementation with:
+- All core and advanced systems
+- Visual rendering with Canvas
+- Input handling
+- UI elements
+- Particle effects
+- Wave spawning
+- Skill cooldowns
+- And more!
+
+```bash
+cd frontend-example
+npm install
+npm run dev
+```

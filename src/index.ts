@@ -58,6 +58,7 @@ export {
   SpawnPattern,
   SpawnTiming,
   CollectibleComponent,
+  CollectibleType,
   MagnetComponent,
   DifficultyComponent,
 } from './components'

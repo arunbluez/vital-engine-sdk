@@ -32,14 +32,14 @@ import {
     SkillTargetType,
     SkillEffectType,
     SpawnPattern,
-    SpawnTiming,
     PathfindingType,
+    SpatialHashGrid,
     DEFAULT_SKILL_DATABASE,
     type EntityDestroyedEventData,
-    type CollectibleType,
+    CollectibleType,
     type SpawnWave,
-    type EnemyType,
-    type SkillDatabase
+    type SkillDatabase,
+    type EnemyType
 } from 'vital-engine-sdk'
 
 import { Renderer } from './renderer'
@@ -95,6 +95,19 @@ class GameFrontend {
     }> = []
     
     private deadEnemies: Map<EntityId, number> = new Map() // Track when enemies died
+    
+    // Particle system
+    private particles: Array<{
+        x: number
+        y: number
+        vx: number
+        vy: number
+        size: number
+        color: string
+        lifetime: number
+        age: number
+        type: 'damage' | 'heal' | 'xp' | 'death'
+    }> = []
 
     constructor() {
         console.log('Starting GameFrontend constructor...')
@@ -141,8 +154,8 @@ class GameFrontend {
         this.setupSystems()
         this.setupEventListeners()
         this.createPlayer()
-        this.createEnemies(15) // Reduced initial enemies since spawner will add more
-        this.createCollectibles(8) // More collectibles for testing
+        this.createEnemies(25) // More initial enemies
+        this.createCollectibles(15) // More collectibles
         this.createSpawner() // Add dynamic spawning
         
         console.log('🎮 === VITAL ENGINE SDK FRONTEND DEMO ===')
@@ -159,7 +172,7 @@ class GameFrontend {
         console.log('  ✅ Skills System (with database integration)')
         console.log('  ✅ Enemy AI System')
         console.log('  ✅ Collection System') 
-        console.log('  ✅ Spawning System (3 waves)')
+        console.log('  ✅ Spawning System (endless waves)')
         console.log('  ✅ Difficulty System (auto-scaling)')
         console.log('  ✅ Advanced AI System')
         console.log('')
@@ -191,16 +204,42 @@ class GameFrontend {
         this.world.addSystem(new EconomySystem(this.events, this.world))
         
         // Advanced game systems
-        this.world.addSystem(new SkillSystem(this.events, this.world as any))
-        this.world.addSystem(new CollectionSystem(this.events, this.world as any))
-        this.world.addSystem(new EnemySystem(this.events, this.world as any))
-        this.world.addSystem(new DifficultySystem(this.events, this.world as any))
-        this.world.addSystem(new SpawnSystem(this.events, this.world as any))
-        this.world.addSystem(new AISystem(this.events, this.world as any, {
+        this.world.addSystem(new SkillSystem(this.world, {
+            baseEffectRadius: 150,
+            baseProjectileSpeed: 300,
+            evolutionCheckInterval: 5000,
+            maxActiveEffects: 10,
+            eventSystem: this.events
+        }))
+        this.world.addSystem(new CollectionSystem())
+        this.world.addSystem(new EnemySystem())
+        this.world.addSystem(new DifficultySystem())
+        
+        // Create spatial grid for spawn system
+        const spatialGrid = new SpatialHashGrid({
+            cellSize: 100,
+            worldBounds: {
+                minX: 0,
+                minY: 0,
+                maxX: 800,
+                maxY: 600
+            }
+        })
+        this.world.addSystem(new SpawnSystem(spatialGrid, {
+            maxGlobalEnemies: 200, // Increased from 50
+            maxEnemiesPerSpawner: 100, // Increased from 25
+            spawnUpdateInterval: 500, // Faster spawn checks (was 1000)
+            difficultyScaling: true
+        }, this.events))
+        
+        this.world.addSystem(new AISystem(spatialGrid, {
             pathfindingType: PathfindingType.A_STAR,
-            maxPathfindingNodes: 1000,
-            enableGroupBehavior: true,
-            enableFlocking: false
+            groupBehaviorEnabled: true,
+            maxPathfindingPerFrame: 10,
+            flowFieldResolution: 32,
+            maxPathLength: 50,
+            obstacleAvoidanceRadius: 20,
+            debugPathfinding: false
         }))
         
         console.log('🎮 All systems initialized including advanced features (AI, Spawning, Difficulty, Collection)')
@@ -209,15 +248,69 @@ class GameFrontend {
     private setupEventListeners(): void {
         // Listen to engine events for visual/audio feedback
         this.events.on(GameEventType.DAMAGE_DEALT, (event) => {
-            console.log('Damage dealt:', event.data)
+            const data = event.data as any
+            console.log('⚔️ DAMAGE EVENT:', event.data)
+            console.log(`  - Source ID: ${data.sourceId} ${data.sourceId === this.playerId ? '(PLAYER)' : '(ENEMY)'}`)
+            console.log(`  - Target ID: ${data.targetId} ${data.targetId === this.playerId ? '(PLAYER)' : '(ENEMY)'}`)
+            
+            // Check if source is dead
+            if (data.sourceId) {
+                const source = this.world.getEntity(data.sourceId)
+                if (source) {
+                    const sourceHealth = source.getComponent('health') as HealthComponent
+                    if (sourceHealth) {
+                        console.log(`  - Source health: ${sourceHealth.current}/${sourceHealth.maximum} ${sourceHealth.isDead() ? '(DEAD!)' : '(ALIVE)'}`)
+                    }
+                }
+            }
+            if (data.targetId) {
+                const target = this.world.getEntity(data.targetId)
+                if (target) {
+                    const transform = target.getComponent('transform') as TransformComponent
+                    if (transform) {
+                        this.createParticles(transform.position.x, transform.position.y, 'damage', 3)
+                    }
+                }
+            }
         })
         
         this.events.on(GameEventType.ENTITY_KILLED, (event) => {
-            console.log('Entity killed:', event.data)
+            console.log('🪦 Entity killed:', event.data)
             // Track when enemy died for cleanup
             const data = event.data as EntityDestroyedEventData
             if (data.entityId && this.enemyIds.includes(data.entityId)) {
                 this.deadEnemies.set(data.entityId, Date.now())
+                console.log(`📝 Marked enemy ${data.entityId} as dead for immediate cleanup`)
+                const enemy = this.world.getEntity(data.entityId)
+                if (enemy) {
+                    const transform = enemy.getComponent('transform') as TransformComponent
+                    if (transform) {
+                        this.createParticles(transform.position.x, transform.position.y, 'death', 8)
+                        
+                        // Drop collectibles when enemy dies
+                        const dropChance = Math.random()
+                        if (dropChance < 0.7) { // 70% chance to drop something
+                            const collectible = this.world.createEntity()
+                            collectible.addComponent(new TransformComponent(
+                                transform.position.x + (Math.random() - 0.5) * 20,
+                                transform.position.y + (Math.random() - 0.5) * 20
+                            ))
+                            
+                            // Random collectible type
+                            const types: CollectibleType[] = [
+                                CollectibleType.EXPERIENCE,
+                                CollectibleType.EXPERIENCE,
+                                CollectibleType.HEALTH,
+                                CollectibleType.CURRENCY
+                            ]
+                            const randomType = types[Math.floor(Math.random() * types.length)]
+                            const value = randomType === CollectibleType.EXPERIENCE ? 5 : 
+                                         randomType === CollectibleType.HEALTH ? 10 : 3
+                            
+                            collectible.addComponent(new CollectibleComponent(randomType, value))
+                        }
+                    }
+                }
             }
         })
         
@@ -250,6 +343,11 @@ class GameFrontend {
         // Collection events
         this.events.on('COLLECTIBLE_COLLECTED', (event) => {
             console.log('💎 Collectible collected:', event.data)
+            const data = event.data as any
+            if (data.position) {
+                const particleType = data.type === CollectibleType.HEALTH ? 'heal' : 'xp'
+                this.createParticles(data.position.x, data.position.y, particleType, 5)
+            }
         })
         
         // Difficulty events
@@ -260,6 +358,10 @@ class GameFrontend {
         // Spawn events
         this.events.on('ENEMY_SPAWNED', (event) => {
             console.log('👾 Enemy spawned:', event.data)
+            const data = event.data as any
+            if (data.entityId) {
+                this.enemyIds.push(data.entityId)
+            }
         })
         
         this.events.on('WAVE_STARTED', (event) => {
@@ -268,6 +370,11 @@ class GameFrontend {
         
         this.events.on('WAVE_COMPLETED', (event) => {
             console.log('✅ Wave completed:', event.data)
+        })
+        
+        // Debug spawn system
+        this.events.on('SPAWN_STATS', (event) => {
+            console.log('📊 Spawn stats:', event.data)
         })
         
         // Handle input
@@ -351,7 +458,7 @@ class GameFrontend {
                 attackSpeed: 2,
                 criticalChance: 0.15,
                 criticalMultiplier: 2.0
-            }))
+            }, false)) // Disable auto-attack for player too
             player.addComponent(new ExperienceComponent(1))
             player.addComponent(new InventoryComponent(20))
         
@@ -476,9 +583,9 @@ class GameFrontend {
                     damage: 5 + Math.random() * 10,
                     range: 60,
                     attackSpeed: 0.5 + Math.random() * 1
-                })
+                }, false) // Disable auto-attack for enemies
                 enemy.addComponent(combat)
-                console.log(`Enemy ${enemy.id} has combat: damage=${combat.weapon.damage}, attackSpeed=${combat.weapon.attackSpeed}`)
+                console.log(`Enemy ${enemy.id} has combat: damage=${combat.weapon.damage}, attackSpeed=${combat.weapon.attackSpeed}, autoAttack=false`)
             } else {
                 console.log(`Enemy ${enemy.id} has no combat ability`)
             }
@@ -498,11 +605,11 @@ class GameFrontend {
             
             try {
                 // Use proper CollectibleType enum values
-                const types: CollectibleType[] = ['CURRENCY', 'EXPERIENCE', 'HEALTH', 'MANA'] as CollectibleType[]
+                const types: CollectibleType[] = [CollectibleType.CURRENCY, CollectibleType.EXPERIENCE, CollectibleType.HEALTH, CollectibleType.MANA]
                 const randomType = types[Math.floor(Math.random() * types.length)]
-                const value = randomType === 'EXPERIENCE' ? 15 : 
-                              randomType === 'HEALTH' ? 25 :
-                              randomType === 'MANA' ? 20 : 5
+                const value = randomType === CollectibleType.EXPERIENCE ? 15 : 
+                              randomType === CollectibleType.HEALTH ? 25 :
+                              randomType === CollectibleType.MANA ? 20 : 5
                 
                 const collectibleComp = new CollectibleComponent(randomType, value)
                 collectible.addComponent(collectibleComp)
@@ -518,70 +625,111 @@ class GameFrontend {
             const spawner = this.world.createEntity()
             spawner.addComponent(new TransformComponent(400, 300)) // Center of screen
             
-            const spawnerComp = new SpawnerComponent()
+            const spawnerComp = new SpawnerComponent({
+                center: { x: 400, y: 300 },
+                radius: 300
+            })
             
             // Define enemy types for spawning
-            const basicEnemy: EnemyType = {
+            const basicEnemyType: EnemyType = {
+                id: 'basic_enemy',
                 name: 'Basic Enemy',
-                health: 40,
-                damage: 8,
-                speed: 60,
-                xpReward: 10,
-                spawnWeight: 1.0
+                weight: 1,
+                minLevel: 1,
+                maxLevel: 99,
+                components: [
+                    { type: 'transform', data: {} },
+                    { type: 'health', data: { maximum: 30 } },
+                    { type: 'movement', data: { maxSpeed: 50 } },
+                    { type: 'combat', data: { damage: 5, range: 60, attackSpeed: 1, autoAttack: false } },
+                    { type: 'enemyAI', data: { detectionRange: 300, attackRange: 80 } }
+                ]
             }
             
-            const fastEnemy: EnemyType = {
-                name: 'Fast Enemy', 
-                health: 25,
-                damage: 6,
-                speed: 100,
-                xpReward: 15,
-                spawnWeight: 0.7
+            const fastEnemyType: EnemyType = {
+                id: 'fast_enemy',
+                name: 'Fast Enemy',
+                weight: 0.7,
+                minLevel: 5,
+                maxLevel: 99,
+                components: [
+                    { type: 'transform', data: {} },
+                    { type: 'health', data: { maximum: 20 } },
+                    { type: 'movement', data: { maxSpeed: 100 } },
+                    { type: 'combat', data: { damage: 3, range: 50, attackSpeed: 2, autoAttack: false } },
+                    { type: 'enemyAI', data: { detectionRange: 350, attackRange: 60 } }
+                ]
             }
             
-            const tankEnemy: EnemyType = {
+            const tankEnemyType: EnemyType = {
+                id: 'tank_enemy',
                 name: 'Tank Enemy',
-                health: 80,
-                damage: 15,
-                speed: 30,
-                xpReward: 25,
-                spawnWeight: 0.3
+                weight: 0.5,
+                minLevel: 10,
+                maxLevel: 99,
+                components: [
+                    { type: 'transform', data: {} },
+                    { type: 'health', data: { maximum: 80 } },
+                    { type: 'movement', data: { maxSpeed: 30 } },
+                    { type: 'combat', data: { damage: 10, range: 70, attackSpeed: 0.5, autoAttack: false } },
+                    { type: 'enemyAI', data: { detectionRange: 250, attackRange: 90 } }
+                ]
             }
             
-            // Create spawn waves
-            const wave1: SpawnWave = {
+            // Add enemy types to spawner
+            spawnerComp.enemyTypes = [basicEnemyType, fastEnemyType, tankEnemyType]
+            
+            const basicEnemy = basicEnemyType.id
+            const fastEnemy = fastEnemyType.id
+            const tankEnemy = tankEnemyType.id
+            
+            // Create spawn waves - endless spawning from the start
+            const startWave: SpawnWave = {
+                id: 'start',
                 enemyTypes: [basicEnemy],
-                spawnCount: 3,
-                spawnInterval: 2000, // 2 seconds between spawns
-                duration: 10000, // 10 seconds total
-                startDelay: 5000 // Start after 5 seconds
+                totalCount: 20,
+                spawnRate: 2, // 2 enemies per second
+                pattern: SpawnPattern.CIRCLE,
+                area: { center: { x: 400, y: 300 }, radius: 350 },
+                delay: 1000 // Start after 1 second
             }
             
-            const wave2: SpawnWave = {
+            const endlessWave1: SpawnWave = {
+                id: 'endless1',
                 enemyTypes: [basicEnemy, fastEnemy],
-                spawnCount: 5,
-                spawnInterval: 1500,
-                duration: 15000,
-                startDelay: 20000 // Start after first wave
+                totalCount: 999999, // Effectively endless
+                spawnRate: 3, // 3 enemies per second
+                pattern: SpawnPattern.CIRCLE,
+                area: { center: { x: 400, y: 300 }, radius: 350 },
+                delay: 5000 // Start after 5 seconds
             }
             
-            const wave3: SpawnWave = {
+            const endlessWave2: SpawnWave = {
+                id: 'endless2',
                 enemyTypes: [basicEnemy, fastEnemy, tankEnemy],
-                spawnCount: 4,
-                spawnInterval: 3000,
-                duration: 20000,
-                startDelay: 40000
+                totalCount: 999999, // Effectively endless
+                spawnRate: 4, // 4 enemies per second
+                pattern: SpawnPattern.CIRCLE,
+                area: { center: { x: 400, y: 300 }, radius: 400 },
+                delay: 15000 // Start after 15 seconds
             }
             
-            spawnerComp.waves = [wave1, wave2, wave3]
-            spawnerComp.pattern = SpawnPattern.WAVE_BASED
-            spawnerComp.timing = SpawnTiming.TIMED
-            spawnerComp.spawnRadius = 300 // Spawn enemies 300 pixels from center
-            spawnerComp.maxEnemies = 25 // Maximum enemies on screen
-            spawnerComp.isActive = true
+            const endlessWave3: SpawnWave = {
+                id: 'endless3',
+                enemyTypes: [basicEnemy, fastEnemy, tankEnemy],
+                totalCount: 999999, // Effectively endless
+                spawnRate: 5, // 5 enemies per second
+                pattern: SpawnPattern.CIRCLE,
+                area: { center: { x: 400, y: 300 }, radius: 400 },
+                delay: 30000 // Start after 30 seconds
+            }
+            
+            spawnerComp.waves = [startWave, endlessWave1, endlessWave2, endlessWave3]
+            spawnerComp.spawnTiming = SpawnTiming.WAVE // Set to wave mode
+            spawnerComp.active = true
             
             spawner.addComponent(spawnerComp)
-            console.log('🌊 Spawner created with 3 waves of enemies')
+            console.log('🌊 Spawner created with endless enemy waves!')
             
         } catch (error) {
             console.error('Failed to create spawner:', error)
@@ -617,6 +765,8 @@ class GameFrontend {
         this.updateOrbitingProjectiles(deltaTime)
         this.updateHealthRegeneration(currentTime)
         this.cleanupDeadEnemies(currentTime)
+        this.updateParticles(deltaTime)
+        this.updateManualCollection() // Add manual collection check
         // Enemy AI is now handled by the EnemySystem
         this.updateEnemyAI()
         
@@ -647,6 +797,7 @@ class GameFrontend {
         this.renderProjectiles()
         this.renderOrbitingProjectiles()
         this.renderAreaEffects()
+        this.renderParticles()
         const renderTime = performance.now() - renderStartTime
         
         // Update UI less frequently
@@ -698,6 +849,10 @@ class GameFrontend {
         }
         
         this.renderCursor()
+        this.renderSkillsUI()
+        this.renderWaveInfo()
+        this.renderDifficultyInfo()
+        this.renderCollectiblesLegend()
         
         requestAnimationFrame(this.gameLoop)
     }
@@ -721,25 +876,25 @@ class GameFrontend {
                 const collectible = entity.getComponent('collectible') as CollectibleComponent
                 if (collectible) {
                     switch (collectible.collectibleType) {
-                        case 'EXPERIENCE':
+                        case CollectibleType.EXPERIENCE:
                             color = '#00ffff' // Cyan for experience
-                            size = 6
+                            size = 4
                             break
-                        case 'HEALTH':
+                        case CollectibleType.HEALTH:
                             color = '#ff0000' // Red for health
-                            size = 7
+                            size = 4
                             break
-                        case 'MANA':
+                        case CollectibleType.MANA:
                             color = '#0066ff' // Blue for mana
-                            size = 7
+                            size = 4
                             break
-                        case 'CURRENCY':
+                        case CollectibleType.CURRENCY:
                             color = '#ffff00' // Yellow for currency
-                            size = 8
+                            size = 5
                             break
                         default:
                             color = '#ffffff' // White for unknown
-                            size = 6
+                            size = 4
                     }
                 } else {
                     color = '#ffff00'
@@ -748,19 +903,8 @@ class GameFrontend {
             } else if (entity.hasComponent('enemyAI')) {
                 const ai = entity.getComponent('enemyAI') as EnemyAIComponent
                 if (health && health.isDead()) {
-                    // Check if enemy is tracked as dead
-                    const deathTime = this.deadEnemies.get(entity.id)
-                    if (deathTime) {
-                        const elapsed = Date.now() - deathTime
-                        const fadeProgress = Math.min(elapsed / 3000, 1) // 3 second fade
-                        const alpha = 1 - fadeProgress
-                        color = `rgba(102, 102, 102, ${alpha})` // Fading gray
-                    } else {
-                        color = '#666' // Gray for dead
-                        // Track it as dead if not already
-                        this.deadEnemies.set(entity.id, Date.now())
-                    }
-                    size = 10
+                    // Don't render dead enemies at all - they should be invisible
+                    return // Skip rendering this entity completely
                 } else if (ai) {
                     switch (ai.currentState) {
                         case 'seeking':
@@ -847,7 +991,19 @@ class GameFrontend {
     }
     
     private cleanupDeadEnemies(currentTime: number): void {
-        const deathDuration = 3000 // 3 seconds before disappearing
+        const deathDuration = 100 // 0.1 seconds - much faster cleanup
+        
+        // Also check for any dead enemies not yet tracked
+        this.enemyIds.forEach(enemyId => {
+            const enemy = this.world.getEntity(enemyId)
+            if (enemy) {
+                const health = enemy.getComponent('health') as HealthComponent
+                if (health && health.isDead() && !this.deadEnemies.has(enemyId)) {
+                    this.deadEnemies.set(enemyId, currentTime)
+                    console.log(`🪦 Tracking dead enemy ${enemyId} for cleanup`)
+                }
+            }
+        })
         
         for (const [enemyId, deathTime] of this.deadEnemies.entries()) {
             if (currentTime - deathTime > deathDuration) {
@@ -855,7 +1011,7 @@ class GameFrontend {
                 const enemy = this.world.getEntity(enemyId)
                 if (enemy) {
                     this.world.destroyEntity(enemyId)
-                    console.log(`Removed dead enemy ${enemyId}`)
+                    console.log(`🗑️ Removed dead enemy ${enemyId}`)
                 }
                 
                 // Remove from tracking
@@ -906,9 +1062,18 @@ class GameFrontend {
         if (!playerTransform) return
         
         // Update ALL enemies since EnemySystem doesn't seem to be working
-        this.enemyIds.forEach(enemyId => {
+        // Create a copy of enemyIds to avoid modification during iteration
+        const enemyIdsCopy = [...this.enemyIds]
+        enemyIdsCopy.forEach(enemyId => {
             const enemy = this.world.getEntity(enemyId)
-            if (!enemy) return
+            if (!enemy) {
+                // Remove missing enemies from tracking
+                const index = this.enemyIds.indexOf(enemyId)
+                if (index > -1) {
+                    this.enemyIds.splice(index, 1)
+                }
+                return
+            }
             
             const enemyTransform = enemy.getComponent('transform') as TransformComponent
             const enemyMovement = enemy.getComponent('movement') as MovementComponent
@@ -918,11 +1083,16 @@ class GameFrontend {
             
             if (!enemyTransform || !enemyMovement || !enemyHealth) return
             
+            // Skip all processing for dead enemies
             if (enemyHealth.isDead()) {
                 enemyMovement.velocity.x = 0
                 enemyMovement.velocity.y = 0
                 if (enemyAI) {
                     enemyAI.currentState = AIBehaviorState.DEAD
+                }
+                // Mark for immediate cleanup
+                if (!this.deadEnemies.has(enemyId)) {
+                    this.deadEnemies.set(enemyId, Date.now())
                 }
                 return
             }
@@ -951,19 +1121,28 @@ class GameFrontend {
                         const timeSinceLastAttack = currentTime - enemyAI.lastActionTime
                         
                         if (enemyCombat && timeSinceLastAttack > attackCooldown) {
-                            console.log(`Enemy ${enemyId} attacking! Distance: ${distance.toFixed(1)}, Cooldown: ${attackCooldown}ms, Time since last: ${timeSinceLastAttack}ms`)
-                            
-                            // Create enemy projectile
-                            this.createProjectile(
-                                enemyTransform.position.x,
-                                enemyTransform.position.y,
-                                playerTransform.position.x,
-                                playerTransform.position.y,
-                                enemyId,
-                                true // isEnemy flag
-                            )
-                            enemyAI.lastActionTime = currentTime
-                            console.log(`Enemy ${enemyId} fired projectile! Total projectiles: ${this.projectiles.length}`)
+                            // Double-check enemy is not dead before firing
+                            if (!enemyHealth.isDead()) {
+                                console.log(`🔫 ENEMY FIRING:`)
+                                console.log(`  - Enemy ID: ${enemyId}`)
+                                console.log(`  - Enemy health: ${enemyHealth.current}/${enemyHealth.maximum}`)
+                                console.log(`  - Distance to player: ${distance.toFixed(1)}`)
+                                console.log(`  - Attack cooldown: ${attackCooldown}ms`)
+                                
+                                // Create enemy projectile
+                                this.createProjectile(
+                                    enemyTransform.position.x,
+                                    enemyTransform.position.y,
+                                    playerTransform.position.x,
+                                    playerTransform.position.y,
+                                    enemyId,
+                                    true // isEnemy flag
+                                )
+                                enemyAI.lastActionTime = currentTime
+                                console.log(`  - Projectile created! Total projectiles: ${this.projectiles.length}`)
+                            } else {
+                                console.log(`⚠️ PREVENTED DEAD ENEMY ${enemyId} FROM FIRING!`)
+                            }
                         } else if (enemyCombat && this.frameCount % 60 === 0) {
                             // Log every second why enemy isn't firing
                             console.log(`Enemy ${enemyId} not firing - cooldown not met. Time left: ${attackCooldown - timeSinceLastAttack}ms`)
@@ -988,16 +1167,19 @@ class GameFrontend {
                     const attackCooldown = 1000 / enemyCombat.weapon.attackSpeed
                     
                     if (currentTime - attackState.lastAttackTime! > attackCooldown) {
-                        console.log(`Non-AI enemy ${enemyId} attacking!`)
-                        this.createProjectile(
-                            enemyTransform.position.x,
-                            enemyTransform.position.y,
-                            playerTransform.position.x,
-                            playerTransform.position.y,
-                            enemyId,
-                            true
-                        )
-                        attackState.lastAttackTime = currentTime
+                        // Double-check enemy is not dead before firing
+                        if (!enemyHealth.isDead()) {
+                            console.log(`Non-AI enemy ${enemyId} attacking!`)
+                            this.createProjectile(
+                                enemyTransform.position.x,
+                                enemyTransform.position.y,
+                                playerTransform.position.x,
+                                playerTransform.position.y,
+                                enemyId,
+                                true
+                            )
+                            attackState.lastAttackTime = currentTime
+                        }
                     }
                 }
                 
@@ -1032,21 +1214,47 @@ class GameFrontend {
         if (!player) return
         
         const transform = player.getComponent('transform') as TransformComponent
-        if (!transform) return
+        const combat = player.getComponent('combat') as CombatComponent
+        if (!transform || !combat) return
         
-        const mousePos = this.input.getMousePosition()
+        // Find nearest enemy within range
+        let nearestEnemy: Entity | null = null
+        let nearestDistance = combat.weapon.range * 2 || 200 // Increased range for auto-aim
         
-        if (this.projectiles.length < 8) {
-            this.createProjectile(
-                transform.position.x,
-                transform.position.y,
-                mousePos.x,
-                mousePos.y,
-                this.playerId
-            )
+        this.enemyIds.forEach(enemyId => {
+            const enemy = this.world.getEntity(enemyId)
+            if (!enemy) return
+            
+            const enemyHealth = enemy.getComponent('health') as HealthComponent
+            if (!enemyHealth || enemyHealth.isDead()) return
+            
+            const enemyTransform = enemy.getComponent('transform') as TransformComponent
+            if (!enemyTransform) return
+            
+            const dx = enemyTransform.position.x - transform.position.x
+            const dy = enemyTransform.position.y - transform.position.y
+            const distance = Math.sqrt(dx * dx + dy * dy)
+            
+            if (distance < nearestDistance) {
+                nearestDistance = distance
+                nearestEnemy = enemy
+            }
+        })
+        
+        if (nearestEnemy !== null && this.projectiles.length < 8) {
+            const targetEnemy = nearestEnemy as Entity
+            const enemyTransform = targetEnemy.getComponent('transform') as TransformComponent
+            if (enemyTransform) {
+                this.createProjectile(
+                    transform.position.x,
+                    transform.position.y,
+                    enemyTransform.position.x,
+                    enemyTransform.position.y,
+                    this.playerId
+                )
+                this.lastAutoFireTime = currentTime
+            }
         }
-        
-        this.lastAutoFireTime = currentTime
     }
     
     private createOrbitingProjectiles(): void {
@@ -1091,7 +1299,7 @@ class GameFrontend {
                 const dx = orb.x! - enemyTransform.position.x
                 const dy = orb.y! - enemyTransform.position.y
                 const distanceSquared = dx * dx + dy * dy
-                const hitRadiusSquared = (orb.size + 10) * (orb.size + 10)
+                const hitRadiusSquared = (orb.size + 8) * (orb.size + 8) // Slightly smaller hitbox
                 
                 if (distanceSquared < hitRadiusSquared) {
                     const now = Date.now()
@@ -1198,6 +1406,18 @@ class GameFrontend {
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const projectile = this.projectiles[i]
             
+            // Clean up projectiles from dead enemies
+            if (projectile.isEnemy && projectile.ownerId) {
+                const owner = this.world.getEntity(projectile.ownerId)
+                if (owner) {
+                    const ownerHealth = owner.getComponent('health') as HealthComponent
+                    if (ownerHealth && ownerHealth.isDead()) {
+                        this.projectiles.splice(i, 1)
+                        continue
+                    }
+                }
+            }
+            
             projectile.x += projectile.velocityX * (deltaTime / 1000)
             projectile.y += projectile.velocityY * (deltaTime / 1000)
             projectile.age += deltaTime
@@ -1228,11 +1448,29 @@ class GameFrontend {
                             const dy = projectile.y - playerTransform.position.y
                             const distanceSquared = dx * dx + dy * dy
                             
-                            if (distanceSquared < 225) { // 15^2 = 225
+                            if (distanceSquared < 144) { // 12^2 = 144 (smaller hitbox)
+                                // Check if the projectile owner is dead
+                                let ownerIsDead = false
+                                if (projectile.ownerId) {
+                                    const owner = this.world.getEntity(projectile.ownerId)
+                                    if (owner) {
+                                        const ownerHealth = owner.getComponent('health') as HealthComponent
+                                        ownerIsDead = ownerHealth ? ownerHealth.isDead() : false
+                                    }
+                                }
+                                
+                                console.log(`🎯 PLAYER HIT DEBUG:`)
+                                console.log(`  - Projectile Owner ID: ${projectile.ownerId}`)
+                                console.log(`  - Owner is dead: ${ownerIsDead}`)
+                                console.log(`  - Projectile age: ${projectile.age}ms`)
+                                console.log(`  - Damage: ${projectile.damage}`)
+                                console.log(`  - Player health before: ${playerHealth.current}/${playerHealth.maximum}`)
+                                
                                 playerHealth.takeDamage(projectile.damage, performance.now())
                                 this.projectiles.splice(i, 1)
                                 hit = true
-                                console.log(`Player hit by enemy projectile! Damage: ${projectile.damage}`)
+                                
+                                console.log(`  - Player health after: ${playerHealth.current}/${playerHealth.maximum}`)
                             }
                         }
                     }
@@ -1253,7 +1491,7 @@ class GameFrontend {
                     const dy = projectile.y - enemyTransform.position.y
                     const distanceSquared = dx * dx + dy * dy
                     
-                    if (distanceSquared < 225) {
+                    if (distanceSquared < 100) { // 10^2 = 100 (more precise hitbox)
                         enemyHealth.takeDamage(projectile.damage, performance.now())
                         
                         this.projectiles.splice(i, 1)
@@ -1310,6 +1548,100 @@ class GameFrontend {
                 }
             }
         }
+    }
+
+    private renderSkillsUI(): void {
+        if (!this.playerId) return
+        
+        const player = this.world.getEntity(this.playerId)
+        if (!player) return
+        
+        const skills = player.getComponent('skills') as SkillsComponent
+        if (!skills) return
+        
+        let x = 20
+        const y = this.canvas.height - 80
+        const iconSize = 50
+        const spacing = 10
+        
+        skills.skills.forEach(skill => {
+            if (skill.type === SkillType.ACTIVE) {
+                const currentTime = Date.now()
+                const cooldownRemaining = Math.max(0, skill.cooldown - (currentTime - skill.lastUsed))
+                const cooldownPercent = cooldownRemaining / skill.cooldown
+                
+                this.renderer.drawSkillIcon(
+                    x + iconSize/2,
+                    y + iconSize/2,
+                    iconSize,
+                    skill.id,
+                    cooldownPercent
+                )
+                
+                // Skill key hint
+                this.renderer.drawText(
+                    skill.id === 'area_blast' ? 'SPACE' : '',
+                    x + iconSize/2,
+                    y + iconSize + 15,
+                    '#aaa',
+                    '10px Arial'
+                )
+                
+                x += iconSize + spacing
+            }
+        })
+    }
+
+    private renderWaveInfo(): void {
+        const spawners = this.world.getActiveEntities().filter((e: Entity) => 
+            e.hasComponent('spawner')
+        )
+        
+        if (spawners.length > 0) {
+            const spawner = spawners[0]
+            const spawnerComp = spawner.getComponent('spawner') as SpawnerComponent
+            
+            if (spawnerComp && spawnerComp.currentWave) {
+                const waveProgress = spawnerComp.waveProgress / spawnerComp.currentWave.totalCount
+                
+                this.renderer.drawWaveIndicator(
+                    this.canvas.width / 2,
+                    30,
+                    spawnerComp.currentWaveIndex + 1,
+                    waveProgress
+                )
+            }
+        }
+    }
+
+    private renderDifficultyInfo(): void {
+        if (!this.playerId) return
+        
+        const player = this.world.getEntity(this.playerId)
+        if (!player) return
+        
+        const difficulty = player.getComponent('difficulty') as DifficultyComponent
+        if (!difficulty) return
+        
+        const x = this.canvas.width - 150
+        const y = 20
+        
+        this.renderer.drawText(
+            `Difficulty: ${difficulty.currentLevel}`,
+            x,
+            y,
+            difficulty.currentLevel === 'HARD' ? '#f00' : 
+            difficulty.currentLevel === 'NORMAL' ? '#ff0' : '#0f0',
+            'bold 14px Arial'
+        )
+        
+        this.renderer.drawText(
+            `Score: ${Math.floor(difficulty.currentScore)}`,
+            x,
+            y + 20,
+            '#fff',
+            '12px Arial'
+        )
     }
 
     private updateUI(): void {
@@ -1571,9 +1903,8 @@ class GameFrontend {
             const spawnerComp = firstSpawner.getComponent('spawner') as SpawnerComponent
             if (spawnerComp) {
                 console.log(`  Wave count: ${spawnerComp.waves.length}`)
-                console.log(`  Pattern: ${spawnerComp.pattern}`)
-                console.log(`  Max enemies: ${spawnerComp.maxEnemies}`)
-                console.log(`  Active: ${spawnerComp.isActive}`)
+                console.log(`  Pattern: ${spawnerComp.waves[0]?.pattern || 'N/A'}`)
+                console.log(`  Spawning active: ${spawnerComp.active}`)
                 console.log(`  Current wave: ${spawnerComp.currentWaveIndex}`)
             }
             console.log('👀 Watch for new enemies to spawn in waves!')
@@ -1584,6 +1915,132 @@ class GameFrontend {
         console.log('Press Q for menu, or 1/2/3/5 for other tests')
     }
     
+    private createParticles(
+        x: number,
+        y: number,
+        type: 'damage' | 'heal' | 'xp' | 'death',
+        count: number = 5
+    ): void {
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5
+            const speed = 50 + Math.random() * 100
+            
+            const particle = {
+                x,
+                y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                size: type === 'death' ? 4 : 2,
+                color: type === 'damage' ? '#ff0000' :
+                       type === 'heal' ? '#00ff00' :
+                       type === 'xp' ? '#00ffff' : '#ff00ff',
+                lifetime: 1000,
+                age: 0,
+                type
+            }
+            
+            this.particles.push(particle)
+        }
+    }
+    
+    private updateParticles(deltaTime: number): void {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const particle = this.particles[i]
+            
+            particle.x += particle.vx * (deltaTime / 1000)
+            particle.y += particle.vy * (deltaTime / 1000)
+            particle.vy += 200 * (deltaTime / 1000) // gravity
+            particle.age += deltaTime
+            
+            if (particle.age >= particle.lifetime) {
+                this.particles.splice(i, 1)
+            }
+        }
+    }
+    
+    private renderParticles(): void {
+        this.particles.forEach(particle => {
+            const progress = particle.age / particle.lifetime
+            const alpha = 1 - progress
+            const size = particle.size * (1 - progress * 0.5)
+            
+            this.renderer.drawParticle(
+                particle.x,
+                particle.y,
+                size,
+                particle.color,
+                alpha
+            )
+        })
+    }
+
+    private updateManualCollection(): void {
+        if (!this.playerId) return
+        
+        const player = this.world.getEntity(this.playerId)
+        if (!player) return
+        
+        const playerTransform = player.getComponent('transform') as TransformComponent
+        const playerMagnet = player.getComponent('magnet') as MagnetComponent
+        if (!playerTransform || !playerMagnet) return
+        
+        const collectibles = this.world.getActiveEntities().filter((e: Entity) => 
+            e.hasComponent('collectible') && e.hasComponent('transform')
+        )
+        
+        collectibles.forEach(collectible => {
+            const collectibleTransform = collectible.getComponent('transform') as TransformComponent
+            const collectibleComp = collectible.getComponent('collectible') as CollectibleComponent
+            
+            if (!collectibleTransform || !collectibleComp) return
+            
+            const dx = collectibleTransform.position.x - playerTransform.position.x
+            const dy = collectibleTransform.position.y - playerTransform.position.y
+            const distance = Math.sqrt(dx * dx + dy * dy)
+            
+            // Magnetic attraction
+            if (distance <= playerMagnet.magneticField.range && distance > 20) {
+                const attraction = playerMagnet.magneticField.strength / Math.max(distance, 1)
+                collectibleTransform.position.x -= dx / distance * attraction * 0.02
+                collectibleTransform.position.y -= dy / distance * attraction * 0.02
+            }
+            
+            // Collection
+            if (distance <= 20) {
+                // Apply collection effect
+                switch (collectibleComp.collectibleType) {
+                    case CollectibleType.HEALTH:
+                        const health = player.getComponent('health') as HealthComponent
+                        if (health) {
+                            health.heal(collectibleComp.value)
+                        }
+                        break
+                    case CollectibleType.EXPERIENCE:
+                        const experience = player.getComponent('experience') as ExperienceComponent
+                        if (experience) {
+                            experience.addExperience(collectibleComp.value)
+                        }
+                        break
+                    case CollectibleType.CURRENCY:
+                        // Add currency logic if needed
+                        break
+                }
+                
+                // Emit collection event
+                this.events.emit('COLLECTIBLE_COLLECTED', {
+                    collectorId: this.playerId,
+                    collectibleId: collectible.id,
+                    type: collectibleComp.collectibleType,
+                    value: collectibleComp.value,
+                    position: { x: collectibleTransform.position.x, y: collectibleTransform.position.y }
+                })
+                
+                // Remove collectible
+                this.world.destroyEntity(collectible.id)
+            }
+        })
+    }
+
     private testDifficultySystem(): void {
         console.clear()
         console.log('📈 === TESTING DIFFICULTY SYSTEM ===')
@@ -1595,14 +2052,13 @@ class GameFrontend {
             if (difficulty) {
                 console.log('✅ Difficulty System enabled!')
                 console.log(`  Current level: ${difficulty.currentLevel}`)
-                console.log(`  Time survived: ${difficulty.timeSurvived}ms`)
-                console.log(`  Enemies killed: ${difficulty.enemiesKilled}`)
-                console.log(`  Level progression rate: ${difficulty.levelProgressionRate}`)
-                console.log(`  Next level threshold: ${difficulty.nextLevelThreshold}`)
+                console.log(`  Time survived: ${difficulty.performanceMetrics.survivalTime}ms`)
+                console.log(`  Enemies killed: ${difficulty.performanceMetrics.enemiesKilled}`)
+                console.log(`  Player level: ${difficulty.performanceMetrics.playerLevel}`)
                 
-                console.log('📊 Current modifiers:')
-                difficulty.currentModifiers.forEach((modifier, index) => {
-                    console.log(`    ${index + 1}. ${modifier.name}: ${modifier.value} (${modifier.type})`)
+                console.log('📊 Active modifiers:')
+                difficulty.activeModifiers.forEach((modifier, name) => {
+                    console.log(`    ${name}: ${modifier.name}`)
                 })
                 
                 console.log('👀 Difficulty increases over time and with enemy kills!')
@@ -1612,6 +2068,43 @@ class GameFrontend {
             }
         }
         console.log('Press Q for menu, or 1/2/3/4 for other tests')
+    }
+    
+    private renderCollectiblesLegend(): void {
+        const x = this.canvas.width - 160
+        const startY = this.canvas.height - 120
+        const lineHeight = 20
+        
+        // Background for legend
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+        this.ctx.fillRect(x - 10, startY - 15, 150, 110)
+        
+        // Title
+        this.ctx.fillStyle = '#fff'
+        this.ctx.font = 'bold 12px Arial'
+        this.ctx.textAlign = 'left'
+        this.ctx.fillText('Collectibles:', x, startY)
+        
+        // Experience
+        this.renderer.drawCircle(x + 10, startY + lineHeight + 2, 4, '#00ffff', true)
+        this.ctx.fillStyle = '#00ffff'
+        this.ctx.font = '11px Arial'
+        this.ctx.fillText('Experience', x + 25, startY + lineHeight + 5)
+        
+        // Health
+        this.renderer.drawCircle(x + 10, startY + lineHeight * 2 + 2, 4, '#ff0000', true)
+        this.ctx.fillStyle = '#ff0000'
+        this.ctx.fillText('Health', x + 25, startY + lineHeight * 2 + 5)
+        
+        // Mana
+        this.renderer.drawCircle(x + 10, startY + lineHeight * 3 + 2, 4, '#0066ff', true)
+        this.ctx.fillStyle = '#0066ff'
+        this.ctx.fillText('Mana', x + 25, startY + lineHeight * 3 + 5)
+        
+        // Currency
+        this.renderer.drawCircle(x + 10, startY + lineHeight * 4 + 2, 5, '#ffff00', true)
+        this.ctx.fillStyle = '#ffff00'
+        this.ctx.fillText('Currency', x + 25, startY + lineHeight * 4 + 5)
     }
 }
 

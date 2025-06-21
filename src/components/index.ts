@@ -43,7 +43,7 @@ export {
 } from './Spawner'
 export {
   CollectibleComponent,
-  type CollectibleType,
+  CollectibleType,
   type MagnetismConfig,
 } from './Collectible'
 export {
