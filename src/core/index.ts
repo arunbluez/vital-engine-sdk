@@ -1,13 +1,13 @@
 export * from './ECS'
 export { EventSystem } from './EventSystem'
 export { Engine, createEngine } from './Engine'
-export { 
-  PerformanceMonitor, 
+export {
+  PerformanceMonitor,
   globalPerformanceMonitor,
   type PerformanceMetrics,
   type SystemMetrics,
   type QualitySettings,
-  type PerformanceThresholds
+  type PerformanceThresholds,
 } from './PerformanceMonitor'
 export {
   Profiler,
@@ -18,5 +18,5 @@ export {
   type ProfilerFrame,
   type ProfilerReport,
   type MarkStatistics,
-  type ProfilerConfig
+  type ProfilerConfig,
 } from './Profiler'

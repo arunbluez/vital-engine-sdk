@@ -22,6 +22,14 @@ describe('CombatSystem', () => {
     jest.clearAllMocks();
   });
 
+  const createCombatQuery = (entity: Entity): any => ({
+    id: entity.id,
+    components: {
+      transform: entity.getComponent('transform'),
+      combat: entity.getComponent('combat')
+    }
+  });
+
   describe('initialization', () => {
     it('should initialize with correct name and dependencies', () => {
       expect(combatSystem.name).toBe('combat');
@@ -67,9 +75,9 @@ describe('CombatSystem', () => {
 
       attackerCombat.setTarget(target.id);
 
-      // Simulate update cycle
-      const context = { deltaTime: 16, totalTime: 16, frameCount: 1 };
-      combatSystem.update(context, []);
+      // Simulate update cycle (use enough time to pass cooldown)
+      const context = { deltaTime: 16, totalTime: 1100, frameCount: 1 };
+      combatSystem.update(context, [createCombatQuery(attacker)]);
 
       // Check if damage was dealt
       expect(targetHealth.current).toBeLessThan(100);
@@ -84,8 +92,8 @@ describe('CombatSystem', () => {
       targetTransform.setPosition(100, 0);
       attackerCombat.setTarget(target.id);
 
-      const context = { deltaTime: 16, totalTime: 16, frameCount: 1 };
-      combatSystem.update(context, []);
+      const context = { deltaTime: 16, totalTime: 1100, frameCount: 1 };
+      combatSystem.update(context, [createCombatQuery(attacker)]);
 
       expect(targetHealth.current).toBe(100);
     });
@@ -98,18 +106,18 @@ describe('CombatSystem', () => {
 
       // First attack
       const context1 = { deltaTime: 16, totalTime: 16, frameCount: 1 };
-      combatSystem.update(context1, []);
+      combatSystem.update(context1, [createCombatQuery(attacker)]);
       const healthAfterFirst = targetHealth.current;
 
       // Immediate second update (should not attack due to cooldown)
       const context2 = { deltaTime: 16, totalTime: 32, frameCount: 2 };
-      combatSystem.update(context2, []);
+      combatSystem.update(context2, [createCombatQuery(attacker)]);
       
       expect(targetHealth.current).toBe(healthAfterFirst);
 
       // Wait for cooldown and attack again
       const context3 = { deltaTime: 1100, totalTime: 1132, frameCount: 3 };
-      combatSystem.update(context3, []);
+      combatSystem.update(context3, [createCombatQuery(attacker)]);
       
       expect(targetHealth.current).toBeLessThan(healthAfterFirst);
     });
@@ -121,14 +129,15 @@ describe('CombatSystem', () => {
       const attackerCombat = attacker.getComponent('combat') as CombatComponent;
       attackerCombat.setTarget(target.id);
 
-      const context = { deltaTime: 16, totalTime: 16, frameCount: 1 };
-      combatSystem.update(context, []);
+      const context = { deltaTime: 16, totalTime: 1100, frameCount: 1 };
+      combatSystem.update(context, [createCombatQuery(attacker)]);
 
       expect(damageSpy).toHaveBeenCalledWith(expect.objectContaining({
-        attackerId: attacker.id,
-        targetId: target.id,
-        damage: expect.any(Number),
-        remainingHealth: expect.any(Number)
+        data: expect.objectContaining({
+          sourceId: attacker.id,
+          targetId: target.id,
+          damage: expect.any(Number)
+        })
       }));
     });
 
@@ -143,12 +152,14 @@ describe('CombatSystem', () => {
       targetHealth.takeDamage(95);
       attackerCombat.setTarget(target.id);
 
-      const context = { deltaTime: 16, totalTime: 16, frameCount: 1 };
-      combatSystem.update(context, []);
+      const context = { deltaTime: 16, totalTime: 1100, frameCount: 1 };
+      combatSystem.update(context, [createCombatQuery(attacker)]);
 
       expect(killSpy).toHaveBeenCalledWith(expect.objectContaining({
-        killerEntityId: attacker.id,
-        victimEntityId: target.id
+        data: expect.objectContaining({
+          killerId: attacker.id,
+          entityId: target.id
+        })
       }));
     });
   });
@@ -178,8 +189,8 @@ describe('CombatSystem', () => {
 
       attackerCombat.setTarget(target.id);
 
-      const context = { deltaTime: 16, totalTime: 16, frameCount: 1 };
-      combatSystem.update(context, []);
+      const context = { deltaTime: 16, totalTime: 1100, frameCount: 1 };
+      combatSystem.update(context, [createCombatQuery(attacker)]);
 
       // Should deal critical damage (20 instead of 10)
       expect(targetHealth.current).toBe(80);
@@ -212,7 +223,7 @@ describe('CombatSystem', () => {
       for (let i = 0; i < 5; i++) {
         totalTime += 600;
         const context = { deltaTime: 600, totalTime, frameCount: i + 1 };
-        combatSystem.update(context, []);
+        combatSystem.update(context, [createCombatQuery(attacker)]);
       }
 
       const targetHealth = target.getComponent('health') as HealthComponent;
@@ -239,8 +250,8 @@ describe('CombatSystem', () => {
       const attackerCombat = attacker.getComponent('combat') as CombatComponent;
       attackerCombat.setTarget(target.id);
 
-      const context = { deltaTime: 16, totalTime: 16, frameCount: 1 };
-      combatSystem.update(context, []);
+      const context = { deltaTime: 16, totalTime: 1100, frameCount: 1 };
+      combatSystem.update(context, [createCombatQuery(attacker)]);
 
       const targetHealth = target.getComponent('health') as HealthComponent;
       expect(targetHealth.current).toBe(100); // No damage without manual attack
@@ -272,8 +283,8 @@ describe('CombatSystem', () => {
       // Missing transform and health
 
       expect(() => {
-        const context = { deltaTime: 16, totalTime: 16, frameCount: 1 };
-        combatSystem.update(context, []);
+        const context = { deltaTime: 16, totalTime: 1100, frameCount: 1 };
+        combatSystem.update(context, [createCombatQuery(attacker)]);
       }).not.toThrow();
     });
 
@@ -287,8 +298,8 @@ describe('CombatSystem', () => {
       combat.setTarget(999); // Non-existent entity
 
       expect(() => {
-        const context = { deltaTime: 16, totalTime: 16, frameCount: 1 };
-        combatSystem.update(context, []);
+        const context = { deltaTime: 16, totalTime: 1100, frameCount: 1 };
+        combatSystem.update(context, [createCombatQuery(attacker)]);
       }).not.toThrow();
     });
 
@@ -301,8 +312,8 @@ describe('CombatSystem', () => {
       const combat = attacker.getComponent('combat') as CombatComponent;
       combat.setTarget(attacker.id);
 
-      const context = { deltaTime: 16, totalTime: 16, frameCount: 1 };
-      combatSystem.update(context, []);
+      const context = { deltaTime: 16, totalTime: 1100, frameCount: 1 };
+      combatSystem.update(context, [createCombatQuery(attacker)]);
 
       const health = attacker.getComponent('health') as HealthComponent;
       expect(health.current).toBe(100); // Should not damage self

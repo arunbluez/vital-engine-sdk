@@ -1,12 +1,25 @@
 import { System } from '../core/ECS/System'
-import { World } from '../core/ECS/World'
-import type { EntityId, ComponentType, SystemUpdateContext, EntityQuery } from '../types/CoreTypes'
-import { TransformComponent } from '../components/Transform'
-import { HealthComponent } from '../components/Health'
-import { CombatComponent } from '../components/Combat'
-import { MovementComponent } from '../components/Movement'
-import { SkillsComponent, SkillType, SkillEffectType, SkillTargetType, type Skill, type SkillEffect, type ActiveEffect } from '../components/Skills'
-import { ExperienceComponent } from '../components/Experience'
+import type { World } from '../core/ECS/World'
+import type {
+  EntityId,
+  ComponentType,
+  SystemUpdateContext,
+  EntityQuery,
+} from '../types/CoreTypes'
+import type { TransformComponent } from '../components/Transform'
+import type { HealthComponent } from '../components/Health'
+import type { CombatComponent } from '../components/Combat'
+import type { MovementComponent } from '../components/Movement'
+import type { SkillsComponent } from '../components/Skills'
+import {
+  SkillType,
+  SkillEffectType,
+  SkillTargetType,
+  type Skill,
+  type SkillEffect,
+  type ActiveEffect,
+} from '../components/Skills'
+import type { ExperienceComponent } from '../components/Experience'
 import type { GameEvent } from '../types/Events'
 
 interface SkillSystemConfig {
@@ -22,7 +35,7 @@ interface SkillActivation {
   skillId: string
   sourceEntityId: EntityId
   targetEntityId?: EntityId
-  targetPosition?: { x: number, y: number }
+  targetPosition?: { x: number; y: number }
   timestamp: number
 }
 
@@ -43,7 +56,7 @@ interface EvolutionOption {
 export class SkillSystem extends System {
   readonly name = 'skill'
   readonly requiredComponents: ComponentType[] = ['skills']
-  
+
   private config: SkillSystemConfig
   private world: World
   private eventSystem: any
@@ -73,18 +86,18 @@ export class SkillSystem extends System {
       requirements: {
         minLevel: 5,
         minGameTime: 600000, // 10 minutes
-        additionalSkills: ['kogaNinjaScroll']
+        additionalSkills: ['kogaNinjaScroll'],
       },
-      priority: 1
+      priority: 1,
     })
 
     this.evolutionDefinitions.set('holyWater', {
       fromSkillIds: ['garlic'],
       toSkillId: 'holyWater',
       requirements: {
-        minLevel: 5
+        minLevel: 5,
       },
-      priority: 1
+      priority: 1,
     })
   }
 
@@ -103,12 +116,15 @@ export class SkillSystem extends System {
     this.currentGameTime = context.totalTime
 
     // Update cooldowns and active effects
-    entities.forEach(entity => {
+    entities.forEach((entity) => {
       const skills = (entity.components as any).skills as SkillsComponent
 
       // Update skill cooldowns
-      skills.skills.forEach(skill => {
-        if (skill.lastUsed > 0 && this.currentGameTime - skill.lastUsed < skill.cooldown) {
+      skills.skills.forEach((skill) => {
+        if (
+          skill.lastUsed > 0 &&
+          this.currentGameTime - skill.lastUsed < skill.cooldown
+        ) {
           // Skill is still on cooldown
         }
       })
@@ -121,7 +137,10 @@ export class SkillSystem extends System {
     this.processPendingActivations(this.currentGameTime)
 
     // Check for evolution opportunities periodically
-    if (this.currentGameTime - this.lastEvolutionCheck >= this.config.evolutionCheckInterval) {
+    if (
+      this.currentGameTime - this.lastEvolutionCheck >=
+      this.config.evolutionCheckInterval
+    ) {
       this.checkEvolutionOpportunities(entities, this.currentGameTime)
       this.lastEvolutionCheck = this.currentGameTime
     }
@@ -130,7 +149,12 @@ export class SkillSystem extends System {
   /**
    * Activate a skill for an entity
    */
-  activateSkill(entityId: EntityId, skillId: string, targetId?: EntityId, targetPosition?: { x: number, y: number }): boolean {
+  activateSkill(
+    entityId: EntityId,
+    skillId: string,
+    targetId?: EntityId,
+    targetPosition?: { x: number; y: number }
+  ): boolean {
     const entity = this.world.getEntity(entityId)
     if (!entity) return false
 
@@ -149,7 +173,7 @@ export class SkillSystem extends System {
       sourceEntityId: entityId,
       targetEntityId: targetId,
       targetPosition,
-      timestamp: currentTime
+      timestamp: currentTime,
     })
 
     // Mark skill as used
@@ -162,8 +186,8 @@ export class SkillSystem extends System {
       data: {
         entityId,
         skillId,
-        skill
-      }
+        skill,
+      },
     })
 
     return true
@@ -176,7 +200,7 @@ export class SkillSystem extends System {
     const activations = [...this.pendingActivations]
     this.pendingActivations = []
 
-    activations.forEach(activation => {
+    activations.forEach((activation) => {
       const sourceEntity = this.world.getEntity(activation.sourceEntityId)
       if (!sourceEntity) return
 
@@ -187,7 +211,12 @@ export class SkillSystem extends System {
       // Apply skill effects based on target type
       switch (skill.targetType) {
         case SkillTargetType.SELF:
-          this.applySkillToEntity(skill, activation.sourceEntityId, activation.sourceEntityId, gameTime)
+          this.applySkillToEntity(
+            skill,
+            activation.sourceEntityId,
+            activation.sourceEntityId,
+            gameTime
+          )
           break
 
         case SkillTargetType.ENEMIES:
@@ -195,12 +224,24 @@ export class SkillSystem extends System {
           break
 
         case SkillTargetType.AREA:
-          const transform = sourceEntity.getComponent('transform') as TransformComponent
-          this.applySkillToArea(skill, activation.sourceEntityId, activation.targetPosition || transform?.position, gameTime)
+          const transform = sourceEntity.getComponent(
+            'transform'
+          ) as TransformComponent
+          this.applySkillToArea(
+            skill,
+            activation.sourceEntityId,
+            activation.targetPosition || transform?.position,
+            gameTime
+          )
           break
 
         case SkillTargetType.PROJECTILE:
-          this.createProjectile(skill, activation.sourceEntityId, activation.targetPosition || activation.targetEntityId, gameTime)
+          this.createProjectile(
+            skill,
+            activation.sourceEntityId,
+            activation.targetPosition || activation.targetEntityId,
+            gameTime
+          )
           break
       }
     })
@@ -209,11 +250,16 @@ export class SkillSystem extends System {
   /**
    * Apply skill effects to a single entity
    */
-  private applySkillToEntity(skill: Skill, sourceId: EntityId, targetId: EntityId, gameTime: number): void {
+  private applySkillToEntity(
+    skill: Skill,
+    sourceId: EntityId,
+    targetId: EntityId,
+    gameTime: number
+  ): void {
     const targetEntity = this.world.getEntity(targetId)
     if (!targetEntity) return
 
-    skill.effects.forEach(effect => {
+    skill.effects.forEach((effect) => {
       this.applyEffect(effect, sourceId, targetId, skill.id, gameTime)
     })
   }
@@ -221,29 +267,38 @@ export class SkillSystem extends System {
   /**
    * Apply skill to all enemies in range
    */
-  private applySkillToEnemies(skill: Skill, sourceId: EntityId, gameTime: number): void {
+  private applySkillToEnemies(
+    skill: Skill,
+    sourceId: EntityId,
+    gameTime: number
+  ): void {
     const sourceEntity = this.world.getEntity(sourceId)
     if (!sourceEntity) return
 
-    const sourceTransform = sourceEntity.getComponent('transform') as TransformComponent
+    const sourceTransform = sourceEntity.getComponent(
+      'transform'
+    ) as TransformComponent
     if (!sourceTransform) return
 
-    const range = skill.effects.find(e => e.radius)?.radius || this.config.baseEffectRadius
+    const range =
+      skill.effects.find((e) => e.radius)?.radius ||
+      this.config.baseEffectRadius
 
     // Find all enemies in range
-    const enemies = this.world.getEntitiesWithComponents(['transform', 'health'])
-      .filter(entity => {
+    const enemies = this.world
+      .getEntitiesWithComponents(['transform', 'health'])
+      .filter((entity) => {
         if (entity.id === sourceId) return false
-        
+
         const transform = entity.getComponent('transform') as TransformComponent
         const dx = transform.position.x - sourceTransform.position.x
         const dy = transform.position.y - sourceTransform.position.y
         const distance = Math.sqrt(dx * dx + dy * dy)
-        
+
         return distance <= range
       })
 
-    enemies.forEach(enemy => {
+    enemies.forEach((enemy) => {
       this.applySkillToEntity(skill, sourceId, enemy.id, gameTime)
     })
   }
@@ -251,23 +306,31 @@ export class SkillSystem extends System {
   /**
    * Apply skill to an area
    */
-  private applySkillToArea(skill: Skill, sourceId: EntityId, position: { x: number, y: number } | undefined, gameTime: number): void {
+  private applySkillToArea(
+    skill: Skill,
+    sourceId: EntityId,
+    position: { x: number; y: number } | undefined,
+    gameTime: number
+  ): void {
     if (!position) return
 
-    const radius = skill.effects.find(e => e.radius)?.radius || this.config.baseEffectRadius
+    const radius =
+      skill.effects.find((e) => e.radius)?.radius ||
+      this.config.baseEffectRadius
 
     // Find all entities in the area
-    const entitiesInArea = this.world.getEntitiesWithComponents(['transform'])
-      .filter(entity => {
+    const entitiesInArea = this.world
+      .getEntitiesWithComponents(['transform'])
+      .filter((entity) => {
         const transform = entity.getComponent('transform') as TransformComponent
         const dx = transform.position.x - position.x
         const dy = transform.position.y - position.y
         const distance = Math.sqrt(dx * dx + dy * dy)
-        
+
         return distance <= radius
       })
 
-    entitiesInArea.forEach(entity => {
+    entitiesInArea.forEach((entity) => {
       this.applySkillToEntity(skill, sourceId, entity.id, gameTime)
     })
   }
@@ -275,7 +338,12 @@ export class SkillSystem extends System {
   /**
    * Create a projectile for a skill
    */
-  private createProjectile(skill: Skill, sourceId: EntityId, target: { x: number, y: number } | EntityId | undefined, gameTime: number): void {
+  private createProjectile(
+    skill: Skill,
+    sourceId: EntityId,
+    target: { x: number; y: number } | EntityId | undefined,
+    gameTime: number
+  ): void {
     // Projectile creation would be handled by a separate ProjectileSystem
     // For now, emit an event for other systems to handle
     this.emitEvent({
@@ -285,16 +353,24 @@ export class SkillSystem extends System {
         skillId: skill.id,
         sourceEntityId: sourceId,
         target,
-        speed: skill.effects.find(e => e.metadata?.projectileSpeed)?.metadata?.projectileSpeed || this.config.baseProjectileSpeed,
-        effects: skill.effects
-      }
+        speed:
+          skill.effects.find((e) => e.metadata?.projectileSpeed)?.metadata
+            ?.projectileSpeed || this.config.baseProjectileSpeed,
+        effects: skill.effects,
+      },
     })
   }
 
   /**
    * Apply a single effect to an entity
    */
-  private applyEffect(effect: SkillEffect, sourceId: EntityId, targetId: EntityId, skillId: string, gameTime: number): void {
+  private applyEffect(
+    effect: SkillEffect,
+    sourceId: EntityId,
+    targetId: EntityId,
+    skillId: string,
+    gameTime: number
+  ): void {
     // Check chance
     if (effect.chance && this.rng() > effect.chance) return
 
@@ -312,7 +388,13 @@ export class SkillSystem extends System {
 
       case SkillEffectType.BUFF:
       case SkillEffectType.DEBUFF:
-        this.applyStatusEffect(effect, targetEntity, sourceId, skillId, gameTime)
+        this.applyStatusEffect(
+          effect,
+          targetEntity,
+          sourceId,
+          skillId,
+          gameTime
+        )
         break
 
       case SkillEffectType.MOVEMENT:
@@ -320,7 +402,13 @@ export class SkillSystem extends System {
         break
 
       case SkillEffectType.ATTRIBUTE_MODIFY:
-        this.applyAttributeModification(effect, targetEntity, sourceId, skillId, gameTime)
+        this.applyAttributeModification(
+          effect,
+          targetEntity,
+          sourceId,
+          skillId,
+          gameTime
+        )
         break
     }
   }
@@ -328,7 +416,11 @@ export class SkillSystem extends System {
   /**
    * Apply damage effect
    */
-  private applyDamageEffect(effect: SkillEffect, target: any, sourceId: EntityId): void {
+  private applyDamageEffect(
+    effect: SkillEffect,
+    target: any,
+    sourceId: EntityId
+  ): void {
     const health = target.getComponent('health') as HealthComponent
     if (!health) return
 
@@ -341,8 +433,8 @@ export class SkillSystem extends System {
         entityId: target.id,
         damage: effect.value,
         sourceId,
-        sourceType: 'skill'
-      }
+        sourceType: 'skill',
+      },
     })
   }
 
@@ -360,15 +452,21 @@ export class SkillSystem extends System {
       timestamp: this.currentGameTime,
       data: {
         entityId: target.id,
-        amount: effect.value
-      }
+        amount: effect.value,
+      },
     })
   }
 
   /**
    * Apply status effect (buff/debuff)
    */
-  private applyStatusEffect(effect: SkillEffect, target: any, sourceId: EntityId, skillId: string, gameTime: number): void {
+  private applyStatusEffect(
+    effect: SkillEffect,
+    target: any,
+    sourceId: EntityId,
+    skillId: string,
+    gameTime: number
+  ): void {
     const skills = target.getComponent('skills') as SkillsComponent
     if (!skills) return
 
@@ -379,7 +477,7 @@ export class SkillSystem extends System {
       effect,
       startTime: gameTime,
       endTime: effect.duration ? gameTime + effect.duration : undefined,
-      stacks: 1
+      stacks: 1,
     }
 
     skills.addActiveEffect(activeEffect)
@@ -393,14 +491,14 @@ export class SkillSystem extends System {
     if (!movement) return
 
     // Apply movement speed modifier
-    const modifier = effect.metadata?.speedMultiplier as number || 1.0
+    const modifier = (effect.metadata?.speedMultiplier as number) || 1.0
     movement.maxSpeed *= modifier
 
     if (effect.metadata?.dash) {
       // Apply instant dash/teleport
       const transform = target.getComponent('transform') as TransformComponent
       if (transform && effect.metadata.dashDirection) {
-        const dir = effect.metadata.dashDirection as { x: number, y: number }
+        const dir = effect.metadata.dashDirection as { x: number; y: number }
         transform.position.x += dir.x * effect.value
         transform.position.y += dir.y * effect.value
       }
@@ -410,7 +508,13 @@ export class SkillSystem extends System {
   /**
    * Apply attribute modification
    */
-  private applyAttributeModification(effect: SkillEffect, target: any, sourceId: EntityId, skillId: string, gameTime: number): void {
+  private applyAttributeModification(
+    effect: SkillEffect,
+    target: any,
+    sourceId: EntityId,
+    skillId: string,
+    gameTime: number
+  ): void {
     // For permanent or temporary stat modifications
     const attributeName = effect.metadata?.attribute as string
     if (!attributeName) return
@@ -420,14 +524,14 @@ export class SkillSystem extends System {
       case 'damage':
         const combat = target.getComponent('combat') as CombatComponent
         if (combat) {
-          combat.weapon.damage *= (1 + effect.value / 100)
+          combat.weapon.damage *= 1 + effect.value / 100
         }
         break
 
       case 'speed':
         const movement = target.getComponent('movement') as MovementComponent
         if (movement) {
-          movement.maxSpeed *= (1 + effect.value / 100)
+          movement.maxSpeed *= 1 + effect.value / 100
         }
         break
 
@@ -446,17 +550,21 @@ export class SkillSystem extends System {
   /**
    * Check for evolution opportunities
    */
-  private checkEvolutionOpportunities(entities: EntityQuery[], gameTime: number): void {
-    entities.forEach(entity => {
+  private checkEvolutionOpportunities(
+    entities: EntityQuery[],
+    gameTime: number
+  ): void {
+    entities.forEach((entity) => {
       const skills = (entity.components as any).skills as SkillsComponent
-      const experience = (entity.components as any).experience as ExperienceComponent
+      const experience = (entity.components as any)
+        .experience as ExperienceComponent
 
       if (!skills || !experience) return
 
       // Check each evolution definition
       this.evolutionDefinitions.forEach((evolution, evolutionId) => {
         // Check if entity has all required skills at max level
-        const hasRequiredSkills = evolution.fromSkillIds.every(skillId => {
+        const hasRequiredSkills = evolution.fromSkillIds.every((skillId) => {
           const skill = skills.getSkill(skillId)
           return skill && skill.level >= skill.maxLevel
         })
@@ -464,11 +572,19 @@ export class SkillSystem extends System {
         if (!hasRequiredSkills) return
 
         // Check additional requirements
-        if (evolution.requirements.minLevel && experience.level < evolution.requirements.minLevel) return
-        if (evolution.requirements.minGameTime && gameTime < evolution.requirements.minGameTime) return
+        if (
+          evolution.requirements.minLevel &&
+          experience.level < evolution.requirements.minLevel
+        )
+          return
+        if (
+          evolution.requirements.minGameTime &&
+          gameTime < evolution.requirements.minGameTime
+        )
+          return
         if (evolution.requirements.additionalSkills) {
-          const hasAdditional = evolution.requirements.additionalSkills.every(skillId => 
-            skills.getSkill(skillId) !== null
+          const hasAdditional = evolution.requirements.additionalSkills.every(
+            (skillId) => skills.getSkill(skillId) !== null
           )
           if (!hasAdditional) return
         }
@@ -476,15 +592,15 @@ export class SkillSystem extends System {
         // Mark evolution as available
         if (!skills.evolutionProgress.has(evolutionId)) {
           skills.evolutionProgress.set(evolutionId, 1.0)
-          
+
           this.emitEvent({
             type: 'EVOLUTION_AVAILABLE',
             timestamp: gameTime,
             data: {
               entityId: entity.id,
               evolutionId,
-              evolution
-            }
+              evolution,
+            },
           })
         }
       })
@@ -505,7 +621,7 @@ export class SkillSystem extends System {
     if (!evolution) return false
 
     // Remove old skills
-    evolution.fromSkillIds.forEach(skillId => {
+    evolution.fromSkillIds.forEach((skillId) => {
       skills.removeSkill(skillId)
     })
 
@@ -522,8 +638,8 @@ export class SkillSystem extends System {
       data: {
         entityId,
         fromSkillIds: evolution.fromSkillIds,
-        toSkillId: evolution.toSkillId
-      }
+        toSkillId: evolution.toSkillId,
+      },
     })
 
     return true
@@ -535,7 +651,7 @@ export class SkillSystem extends System {
   private createEvolvedSkill(skillId: string): Skill {
     // This would normally come from configuration
     const evolvedSkills: Record<string, Skill> = {
-      'spiritShuriken': {
+      spiritShuriken: {
         id: 'spiritShuriken',
         name: 'Spirit Shuriken',
         description: 'Evolved kunai that pierces through enemies',
@@ -549,14 +665,14 @@ export class SkillSystem extends System {
           {
             type: SkillEffectType.DAMAGE,
             value: 150,
-            metadata: { 
+            metadata: {
               projectileSpeed: 800,
-              piercing: true
-            }
-          }
-        ]
+              piercing: true,
+            },
+          },
+        ],
       },
-      'holyWater': {
+      holyWater: {
         id: 'holyWater',
         name: 'Holy Water',
         description: 'Creates a damaging area effect',
@@ -571,30 +687,35 @@ export class SkillSystem extends System {
             type: SkillEffectType.DAMAGE,
             value: 50,
             duration: 5000,
-            radius: 100
-          }
-        ]
-      }
+            radius: 100,
+          },
+        ],
+      },
     }
 
-    return evolvedSkills[skillId] || {
-      id: skillId,
-      name: skillId,
-      description: 'Unknown evolved skill',
-      type: SkillType.ACTIVE,
-      targetType: SkillTargetType.SELF,
-      level: 1,
-      maxLevel: 5,
-      cooldown: 1000,
-      lastUsed: 0,
-      effects: []
-    }
+    return (
+      evolvedSkills[skillId] || {
+        id: skillId,
+        name: skillId,
+        description: 'Unknown evolved skill',
+        type: SkillType.ACTIVE,
+        targetType: SkillTargetType.SELF,
+        level: 1,
+        maxLevel: 5,
+        cooldown: 1000,
+        lastUsed: 0,
+        effects: [],
+      }
+    )
   }
 
   /**
    * Get available skills for selection (with weighted probability)
    */
-  getAvailableSkillsForSelection(entityId: EntityId, count: number = 3): Skill[] {
+  getAvailableSkillsForSelection(
+    entityId: EntityId,
+    count: number = 3
+  ): Skill[] {
     const entity = this.world.getEntity(entityId)
     if (!entity) return []
 
@@ -603,16 +724,18 @@ export class SkillSystem extends System {
 
     // Get all possible skills from configuration (would normally come from SkillConfig)
     const allSkills = this.getAllAvailableSkills()
-    
+
     // Filter out skills the entity already has
-    const availableSkills = allSkills.filter(skill => 
-      !skills.getSkill(skill.id)
+    const availableSkills = allSkills.filter(
+      (skill) => !skills.getSkill(skill.id)
     )
 
     // Weighted random selection
     const selected: Skill[] = []
-    const weights = availableSkills.map(skill => skill.metadata?.weight as number || 1)
-    
+    const weights = availableSkills.map(
+      (skill) => (skill.metadata?.weight as number) || 1
+    )
+
     for (let i = 0; i < Math.min(count, availableSkills.length); i++) {
       const index = this.weightedRandomSelect(weights)
       if (index >= 0) {
@@ -663,11 +786,11 @@ export class SkillSystem extends System {
         effects: [
           {
             type: SkillEffectType.DAMAGE,
-            value: 50
-          }
+            value: 50,
+          },
         ],
         evolveInto: ['spiritShuriken'],
-        metadata: { weight: 10 }
+        metadata: { weight: 10 },
       },
       {
         id: 'garlic',
@@ -683,11 +806,11 @@ export class SkillSystem extends System {
           {
             type: SkillEffectType.DAMAGE,
             value: 10,
-            radius: 50
-          }
+            radius: 50,
+          },
         ],
         evolveInto: ['holyWater'],
-        metadata: { weight: 8 }
+        metadata: { weight: 8 },
       },
       {
         id: 'kogaNinjaScroll',
@@ -703,11 +826,11 @@ export class SkillSystem extends System {
           {
             type: SkillEffectType.ATTRIBUTE_MODIFY,
             value: 10,
-            metadata: { attribute: 'attackSpeed' }
-          }
+            metadata: { attribute: 'attackSpeed' },
+          },
         ],
-        metadata: { weight: 5 }
-      }
+        metadata: { weight: 5 },
+      },
     ]
   }
 

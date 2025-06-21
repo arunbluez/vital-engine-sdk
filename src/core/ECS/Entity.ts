@@ -4,7 +4,8 @@ import type {
   ComponentMap,
   EntitySnapshot,
 } from '../../types/CoreTypes'
-import { Component, ComponentRegistry } from './Component'
+import type { Component } from './Component'
+import { ComponentRegistry } from './Component'
 import type { Poolable } from '../../utils/Pooling'
 
 /**

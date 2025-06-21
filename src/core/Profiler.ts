@@ -53,7 +53,7 @@ export class Profiler {
     maxFrames: 1000,
     captureStackTraces: false,
     autoReport: false,
-    reportInterval: 60000 // 1 minute
+    reportInterval: 60000, // 1 minute
   }
 
   private frames: ProfilerFrame[] = []
@@ -101,7 +101,7 @@ export class Profiler {
       startTime: performance.now(),
       endTime: 0,
       duration: 0,
-      marks: []
+      marks: [],
     }
 
     // Check for auto reporting
@@ -121,7 +121,8 @@ export class Profiler {
     if (!this.config.enabled || !this.currentFrame) return
 
     this.currentFrame.endTime = performance.now()
-    this.currentFrame.duration = this.currentFrame.endTime - this.currentFrame.startTime
+    this.currentFrame.duration =
+      this.currentFrame.endTime - this.currentFrame.startTime
 
     // Close any unclosed marks
     this.activeMarks.forEach((mark, name) => {
@@ -148,7 +149,7 @@ export class Profiler {
     const mark: ProfilerMark = {
       name,
       startTime: performance.now(),
-      metadata
+      metadata,
     }
 
     // Support nested marks
@@ -178,7 +179,7 @@ export class Profiler {
 
     mark.endTime = performance.now()
     mark.duration = mark.endTime - mark.startTime
-    
+
     this.currentFrame.marks.push(mark)
     this.activeMarks.delete(name)
 
@@ -206,8 +207,8 @@ export class Profiler {
    * Measures an async function execution
    */
   async measureAsync<T>(
-    name: string, 
-    fn: () => Promise<T>, 
+    name: string,
+    fn: () => Promise<T>,
     metadata?: Record<string, any>
   ): Promise<T> {
     this.beginMark(name, metadata)
@@ -230,22 +231,23 @@ export class Profiler {
    */
   generateReport(): string {
     const stats = this.calculateStatistics()
-    
+
     let report = 'Performance Profile Report\n'
     report += '=========================\n\n'
-    
+
     report += 'Frame Statistics:\n'
     report += `  Total Frames: ${stats.totalFrames}\n`
     report += `  Total Duration: ${stats.totalDuration.toFixed(2)}ms\n`
     report += `  Average Frame: ${stats.averageFrameTime.toFixed(2)}ms\n`
     report += `  Min Frame: ${stats.minFrameTime.toFixed(2)}ms\n`
     report += `  Max Frame: ${stats.maxFrameTime.toFixed(2)}ms\n\n`
-    
+
     report += 'Mark Statistics:\n'
-    const sortedMarks = Array.from(stats.markStats.values())
-      .sort((a, b) => b.totalTime - a.totalTime)
-    
-    sortedMarks.forEach(mark => {
+    const sortedMarks = Array.from(stats.markStats.values()).sort(
+      (a, b) => b.totalTime - a.totalTime
+    )
+
+    sortedMarks.forEach((mark) => {
       report += `  ${mark.name}:\n`
       report += `    Count: ${mark.count}\n`
       report += `    Total: ${mark.totalTime.toFixed(2)}ms\n`
@@ -253,7 +255,7 @@ export class Profiler {
       report += `    Min: ${mark.minTime.toFixed(2)}ms\n`
       report += `    Max: ${mark.maxTime.toFixed(2)}ms\n`
     })
-    
+
     return report
   }
 
@@ -262,19 +264,19 @@ export class Profiler {
    */
   private calculateStatistics(): ProfilerReport {
     const markStats = new Map<string, MarkStatistics>()
-    
+
     let totalDuration = 0
     let minFrameTime = Infinity
     let maxFrameTime = 0
-    
-    this.frames.forEach(frame => {
+
+    this.frames.forEach((frame) => {
       totalDuration += frame.duration
       minFrameTime = Math.min(minFrameTime, frame.duration)
       maxFrameTime = Math.max(maxFrameTime, frame.duration)
-      
-      frame.marks.forEach(mark => {
+
+      frame.marks.forEach((mark) => {
         if (!mark.duration) return
-        
+
         let stats = markStats.get(mark.name)
         if (!stats) {
           stats = {
@@ -283,30 +285,31 @@ export class Profiler {
             totalTime: 0,
             averageTime: 0,
             minTime: Infinity,
-            maxTime: 0
+            maxTime: 0,
           }
           markStats.set(mark.name, stats)
         }
-        
+
         stats.count++
         stats.totalTime += mark.duration
         stats.minTime = Math.min(stats.minTime, mark.duration)
         stats.maxTime = Math.max(stats.maxTime, mark.duration)
       })
     })
-    
+
     // Calculate averages
-    markStats.forEach(stats => {
+    markStats.forEach((stats) => {
       stats.averageTime = stats.totalTime / stats.count
     })
-    
+
     return {
       totalFrames: this.frames.length,
       totalDuration,
-      averageFrameTime: this.frames.length > 0 ? totalDuration / this.frames.length : 0,
+      averageFrameTime:
+        this.frames.length > 0 ? totalDuration / this.frames.length : 0,
       minFrameTime: minFrameTime === Infinity ? 0 : minFrameTime,
       maxFrameTime,
-      markStats
+      markStats,
     }
   }
 
@@ -390,7 +393,11 @@ export class DebugUtils {
    */
   static checkpoint(name: string, data?: any): void {
     const timestamp = new Date().toISOString()
-    console.log(`%c[CHECKPOINT] ${name} @ ${timestamp}`, 'color: #FF9800; font-weight: bold', data)
+    console.log(
+      `%c[CHECKPOINT] ${name} @ ${timestamp}`,
+      'color: #FF9800; font-weight: bold',
+      data
+    )
   }
 
   /**
@@ -401,11 +408,18 @@ export class DebugUtils {
     try {
       const result = fn()
       const duration = performance.now() - start
-      console.log(`%c[TIMED] ${name}: ${duration.toFixed(2)}ms`, 'color: #2196F3')
+      console.log(
+        `%c[TIMED] ${name}: ${duration.toFixed(2)}ms`,
+        'color: #2196F3'
+      )
       return result
     } catch (error) {
       const duration = performance.now() - start
-      console.error(`%c[TIMED] ${name}: ${duration.toFixed(2)}ms (FAILED)`, 'color: #F44336', error)
+      console.error(
+        `%c[TIMED] ${name}: ${duration.toFixed(2)}ms (FAILED)`,
+        'color: #F44336',
+        error
+      )
       throw error
     }
   }
@@ -415,7 +429,10 @@ export class DebugUtils {
    */
   static conditionalBreak(condition: boolean, message?: string): void {
     if (condition) {
-      console.warn(`%c[BREAK] ${message || 'Conditional breakpoint hit'}`, 'color: #E91E63; font-weight: bold')
+      console.warn(
+        `%c[BREAK] ${message || 'Conditional breakpoint hit'}`,
+        'color: #E91E63; font-weight: bold'
+      )
       debugger
     }
   }
@@ -423,16 +440,22 @@ export class DebugUtils {
   /**
    * Validates object structure
    */
-  static validate(obj: any, schema: Record<string, string>, throwOnError: boolean = true): boolean {
+  static validate(
+    obj: any,
+    schema: Record<string, string>,
+    throwOnError: boolean = true
+  ): boolean {
     const errors: string[] = []
-    
+
     for (const [key, expectedType] of Object.entries(schema)) {
       const actualType = typeof obj[key]
       if (actualType !== expectedType) {
-        errors.push(`Property '${key}' expected ${expectedType} but got ${actualType}`)
+        errors.push(
+          `Property '${key}' expected ${expectedType} but got ${actualType}`
+        )
       }
     }
-    
+
     if (errors.length > 0) {
       const message = `Validation failed:\\n${errors.join('\\n')}`
       if (throwOnError) {
@@ -442,7 +465,7 @@ export class DebugUtils {
         return false
       }
     }
-    
+
     return true
   }
 }
@@ -455,5 +478,5 @@ export const globalProfiler = new Profiler({
   maxFrames: 1000,
   captureStackTraces: false,
   autoReport: false,
-  reportInterval: 60000
+  reportInterval: 60000,
 })

@@ -15,31 +15,31 @@ export const BASIC_ENEMIES: EnemyType[] = [
     components: [
       {
         type: 'health',
-        data: { maximum: 100 }
+        data: { maximum: 100 },
       },
       {
         type: 'movement',
-        data: { maxSpeed: 50 }
+        data: { maxSpeed: 50 },
       },
       {
         type: 'combat',
         data: {
           damage: { min: 8, max: 12 },
           attackSpeed: 1.0,
-          range: 40
-        }
+          range: 40,
+        },
       },
       {
         type: 'ai',
-        data: { personality: AIPersonality.AGGRESSIVE }
-      }
+        data: { personality: AIPersonality.AGGRESSIVE },
+      },
     ],
     scalingFactors: {
       health: 1.0,
       damage: 1.0,
       speed: 1.0,
-      experience: 1.0
-    }
+      experience: 1.0,
+    },
   },
   {
     id: 'basic_ranged',
@@ -50,31 +50,31 @@ export const BASIC_ENEMIES: EnemyType[] = [
     components: [
       {
         type: 'health',
-        data: { maximum: 80 }
+        data: { maximum: 80 },
       },
       {
         type: 'movement',
-        data: { maxSpeed: 40 }
+        data: { maxSpeed: 40 },
       },
       {
         type: 'combat',
         data: {
           damage: { min: 10, max: 15 },
           attackSpeed: 0.8,
-          range: 150
-        }
+          range: 150,
+        },
       },
       {
         type: 'ai',
-        data: { personality: AIPersonality.DEFENSIVE }
-      }
+        data: { personality: AIPersonality.DEFENSIVE },
+      },
     ],
     scalingFactors: {
       health: 0.8,
       damage: 1.2,
       speed: 0.9,
-      experience: 1.2
-    }
+      experience: 1.2,
+    },
   },
   {
     id: 'fast_scout',
@@ -85,31 +85,31 @@ export const BASIC_ENEMIES: EnemyType[] = [
     components: [
       {
         type: 'health',
-        data: { maximum: 60 }
+        data: { maximum: 60 },
       },
       {
         type: 'movement',
-        data: { maxSpeed: 80 }
+        data: { maxSpeed: 80 },
       },
       {
         type: 'combat',
         data: {
           damage: { min: 5, max: 8 },
           attackSpeed: 2.0,
-          range: 30
-        }
+          range: 30,
+        },
       },
       {
         type: 'ai',
-        data: { personality: AIPersonality.HUNTER }
-      }
+        data: { personality: AIPersonality.HUNTER },
+      },
     ],
     scalingFactors: {
       health: 0.6,
       damage: 0.8,
       speed: 1.5,
-      experience: 1.1
-    }
+      experience: 1.1,
+    },
   },
   {
     id: 'tank',
@@ -120,32 +120,32 @@ export const BASIC_ENEMIES: EnemyType[] = [
     components: [
       {
         type: 'health',
-        data: { maximum: 300 }
+        data: { maximum: 300 },
       },
       {
         type: 'movement',
-        data: { maxSpeed: 25 }
+        data: { maxSpeed: 25 },
       },
       {
         type: 'combat',
         data: {
           damage: { min: 15, max: 20 },
           attackSpeed: 0.5,
-          range: 50
-        }
+          range: 50,
+        },
       },
       {
         type: 'ai',
-        data: { personality: AIPersonality.GUARDIAN }
-      }
+        data: { personality: AIPersonality.GUARDIAN },
+      },
     ],
     scalingFactors: {
       health: 2.0,
       damage: 1.5,
       speed: 0.6,
-      experience: 2.0
-    }
-  }
+      experience: 2.0,
+    },
+  },
 ]
 
 /**
@@ -161,31 +161,31 @@ export const ADVANCED_ENEMIES: EnemyType[] = [
     components: [
       {
         type: 'health',
-        data: { maximum: 40 }
+        data: { maximum: 40 },
       },
       {
         type: 'movement',
-        data: { maxSpeed: 60 }
+        data: { maxSpeed: 60 },
       },
       {
         type: 'combat',
         data: {
           damage: { min: 4, max: 6 },
           attackSpeed: 1.5,
-          range: 30
-        }
+          range: 30,
+        },
       },
       {
         type: 'ai',
-        data: { personality: AIPersonality.SWARM }
-      }
+        data: { personality: AIPersonality.SWARM },
+      },
     ],
     scalingFactors: {
       health: 0.5,
       damage: 0.6,
       speed: 1.2,
-      experience: 0.8
-    }
+      experience: 0.8,
+    },
   },
   {
     id: 'berserker',
@@ -196,11 +196,11 @@ export const ADVANCED_ENEMIES: EnemyType[] = [
     components: [
       {
         type: 'health',
-        data: { maximum: 150 }
+        data: { maximum: 150 },
       },
       {
         type: 'movement',
-        data: { maxSpeed: 70 }
+        data: { maxSpeed: 70 },
       },
       {
         type: 'combat',
@@ -208,20 +208,20 @@ export const ADVANCED_ENEMIES: EnemyType[] = [
           damage: { min: 20, max: 30 },
           attackSpeed: 1.2,
           range: 45,
-          criticalChance: 0.3
-        }
+          criticalChance: 0.3,
+        },
       },
       {
         type: 'ai',
-        data: { personality: AIPersonality.BERSERKER }
-      }
+        data: { personality: AIPersonality.BERSERKER },
+      },
     ],
     scalingFactors: {
       health: 1.2,
       damage: 2.0,
       speed: 1.3,
-      experience: 1.8
-    }
+      experience: 1.8,
+    },
   },
   {
     id: 'healer',
@@ -232,31 +232,31 @@ export const ADVANCED_ENEMIES: EnemyType[] = [
     components: [
       {
         type: 'health',
-        data: { maximum: 120 }
+        data: { maximum: 120 },
       },
       {
         type: 'movement',
-        data: { maxSpeed: 35 }
+        data: { maxSpeed: 35 },
       },
       {
         type: 'combat',
         data: {
           damage: { min: 3, max: 5 },
           attackSpeed: 0.5,
-          range: 100
-        }
+          range: 100,
+        },
       },
       {
         type: 'ai',
-        data: { personality: AIPersonality.SUPPORT }
-      }
+        data: { personality: AIPersonality.SUPPORT },
+      },
     ],
     scalingFactors: {
       health: 1.0,
       damage: 0.3,
       speed: 0.8,
-      experience: 2.5
-    }
+      experience: 2.5,
+    },
   },
   {
     id: 'elite',
@@ -267,11 +267,11 @@ export const ADVANCED_ENEMIES: EnemyType[] = [
     components: [
       {
         type: 'health',
-        data: { maximum: 500 }
+        data: { maximum: 500 },
       },
       {
         type: 'movement',
-        data: { maxSpeed: 55 }
+        data: { maxSpeed: 55 },
       },
       {
         type: 'combat',
@@ -280,21 +280,21 @@ export const ADVANCED_ENEMIES: EnemyType[] = [
           attackSpeed: 1.0,
           range: 60,
           criticalChance: 0.25,
-          criticalDamage: 2.0
-        }
+          criticalDamage: 2.0,
+        },
       },
       {
         type: 'ai',
-        data: { personality: AIPersonality.TACTICAL }
-      }
+        data: { personality: AIPersonality.TACTICAL },
+      },
     ],
     scalingFactors: {
       health: 3.0,
       damage: 2.5,
       speed: 1.1,
-      experience: 5.0
-    }
-  }
+      experience: 5.0,
+    },
+  },
 ]
 
 /**
@@ -310,11 +310,11 @@ export const BOSS_ENEMIES: EnemyType[] = [
     components: [
       {
         type: 'health',
-        data: { maximum: 2000 }
+        data: { maximum: 2000 },
       },
       {
         type: 'movement',
-        data: { maxSpeed: 30 }
+        data: { maxSpeed: 30 },
       },
       {
         type: 'combat',
@@ -323,20 +323,20 @@ export const BOSS_ENEMIES: EnemyType[] = [
           attackSpeed: 0.7,
           range: 100,
           criticalChance: 0.2,
-          criticalDamage: 2.5
-        }
+          criticalDamage: 2.5,
+        },
       },
       {
         type: 'ai',
-        data: { personality: AIPersonality.BERSERKER }
-      }
+        data: { personality: AIPersonality.BERSERKER },
+      },
     ],
     scalingFactors: {
       health: 10.0,
       damage: 5.0,
       speed: 0.6,
-      experience: 20.0
-    }
+      experience: 20.0,
+    },
   },
   {
     id: 'boss_necromancer',
@@ -347,31 +347,31 @@ export const BOSS_ENEMIES: EnemyType[] = [
     components: [
       {
         type: 'health',
-        data: { maximum: 1500 }
+        data: { maximum: 1500 },
       },
       {
         type: 'movement',
-        data: { maxSpeed: 25 }
+        data: { maxSpeed: 25 },
       },
       {
         type: 'combat',
         data: {
           damage: { min: 30, max: 40 },
           attackSpeed: 1.0,
-          range: 200
-        }
+          range: 200,
+        },
       },
       {
         type: 'ai',
-        data: { personality: AIPersonality.TACTICAL }
-      }
+        data: { personality: AIPersonality.TACTICAL },
+      },
     ],
     scalingFactors: {
       health: 8.0,
       damage: 4.0,
       speed: 0.5,
-      experience: 25.0
-    }
+      experience: 25.0,
+    },
   },
   {
     id: 'boss_shadow_lord',
@@ -382,11 +382,11 @@ export const BOSS_ENEMIES: EnemyType[] = [
     components: [
       {
         type: 'health',
-        data: { maximum: 1800 }
+        data: { maximum: 1800 },
       },
       {
         type: 'movement',
-        data: { maxSpeed: 50 }
+        data: { maxSpeed: 50 },
       },
       {
         type: 'combat',
@@ -395,21 +395,21 @@ export const BOSS_ENEMIES: EnemyType[] = [
           attackSpeed: 1.5,
           range: 80,
           criticalChance: 0.4,
-          criticalDamage: 3.0
-        }
+          criticalDamage: 3.0,
+        },
       },
       {
         type: 'ai',
-        data: { personality: AIPersonality.HUNTER }
-      }
+        data: { personality: AIPersonality.HUNTER },
+      },
     ],
     scalingFactors: {
       health: 9.0,
       damage: 6.0,
       speed: 1.0,
-      experience: 30.0
-    }
-  }
+      experience: 30.0,
+    },
+  },
 ]
 
 /**
@@ -425,9 +425,9 @@ export const SPAWN_WAVES: SpawnWave[] = [
     pattern: SpawnPattern.CIRCLE,
     area: {
       center: { x: 0, y: 0 },
-      radius: 300
+      radius: 300,
     },
-    delay: 3000
+    delay: 3000,
   },
   // Wave 2: Mixed basics
   {
@@ -438,12 +438,10 @@ export const SPAWN_WAVES: SpawnWave[] = [
     pattern: SpawnPattern.RANDOM,
     area: {
       center: { x: 0, y: 0 },
-      radius: 400
+      radius: 400,
     },
     delay: 5000,
-    requirements: [
-      { type: 'previous_wave', value: 'wave_1', operator: '=' }
-    ]
+    requirements: [{ type: 'previous_wave', value: 'wave_1', operator: '=' }],
   },
   // Wave 3: Fast enemies
   {
@@ -455,12 +453,10 @@ export const SPAWN_WAVES: SpawnWave[] = [
     area: {
       center: { x: 0, y: 0 },
       width: 600,
-      height: 600
+      height: 600,
     },
     delay: 5000,
-    requirements: [
-      { type: 'time', value: 60000, operator: '>' }
-    ]
+    requirements: [{ type: 'time', value: 60000, operator: '>' }],
   },
   // Wave 4: Tank introduction
   {
@@ -471,12 +467,10 @@ export const SPAWN_WAVES: SpawnWave[] = [
     pattern: SpawnPattern.LINE,
     area: {
       center: { x: 0, y: -300 },
-      width: 400
+      width: 400,
     },
     delay: 5000,
-    requirements: [
-      { type: 'level', value: 5, operator: '>=' }
-    ]
+    requirements: [{ type: 'level', value: 5, operator: '>=' }],
   },
   // Wave 5: Swarm attack
   {
@@ -487,12 +481,10 @@ export const SPAWN_WAVES: SpawnWave[] = [
     pattern: SpawnPattern.WAVE,
     area: {
       center: { x: 0, y: 0 },
-      radius: 500
+      radius: 500,
     },
     delay: 3000,
-    requirements: [
-      { type: 'time', value: 120000, operator: '>' }
-    ]
+    requirements: [{ type: 'time', value: 120000, operator: '>' }],
   },
   // Boss Wave 1
   {
@@ -503,14 +495,14 @@ export const SPAWN_WAVES: SpawnWave[] = [
     pattern: SpawnPattern.PORTAL,
     area: {
       center: { x: 0, y: 0 },
-      points: [{ x: 0, y: -400 }]
+      points: [{ x: 0, y: -400 }],
     },
     delay: 10000,
     requirements: [
       { type: 'enemy_count', value: 0, operator: '=' },
-      { type: 'time', value: 180000, operator: '>' }
-    ]
-  }
+      { type: 'time', value: 180000, operator: '>' },
+    ],
+  },
 ]
 
 /**
@@ -524,7 +516,7 @@ export const BOSS_PHASES: Record<string, BossPhase[]> = {
       enemyTypes: [],
       spawnCount: 0,
       pattern: SpawnPattern.CIRCLE,
-      special: false
+      special: false,
     },
     {
       id: 'phase_2',
@@ -532,7 +524,7 @@ export const BOSS_PHASES: Record<string, BossPhase[]> = {
       enemyTypes: ['basic_melee'],
       spawnCount: 5,
       pattern: SpawnPattern.CIRCLE,
-      special: true
+      special: true,
     },
     {
       id: 'phase_3',
@@ -540,7 +532,7 @@ export const BOSS_PHASES: Record<string, BossPhase[]> = {
       enemyTypes: ['berserker', 'basic_ranged'],
       spawnCount: 8,
       pattern: SpawnPattern.RANDOM,
-      special: true
+      special: true,
     },
     {
       id: 'phase_4',
@@ -548,8 +540,8 @@ export const BOSS_PHASES: Record<string, BossPhase[]> = {
       enemyTypes: ['swarm'],
       spawnCount: 15,
       pattern: SpawnPattern.WAVE,
-      special: true
-    }
+      special: true,
+    },
   ],
   boss_necromancer: [
     {
@@ -558,7 +550,7 @@ export const BOSS_PHASES: Record<string, BossPhase[]> = {
       enemyTypes: ['basic_melee'],
       spawnCount: 3,
       pattern: SpawnPattern.CIRCLE,
-      special: false
+      special: false,
     },
     {
       id: 'phase_2',
@@ -566,7 +558,7 @@ export const BOSS_PHASES: Record<string, BossPhase[]> = {
       enemyTypes: ['tank', 'healer'],
       spawnCount: 4,
       pattern: SpawnPattern.LINE,
-      special: true
+      special: true,
     },
     {
       id: 'phase_3',
@@ -574,9 +566,9 @@ export const BOSS_PHASES: Record<string, BossPhase[]> = {
       enemyTypes: ['elite', 'swarm'],
       spawnCount: 10,
       pattern: SpawnPattern.PERIMETER,
-      special: true
-    }
-  ]
+      special: true,
+    },
+  ],
 }
 
 /**
@@ -589,7 +581,7 @@ export const ENEMY_GROUPS = {
   swarm_cluster: Array(10).fill('swarm'),
   elite_guard: ['elite', 'tank', 'healer'],
   mixed_assault: ['berserker', 'basic_melee', 'basic_ranged', 'fast_scout'],
-  boss_minions: ['swarm', 'swarm', 'basic_melee', 'basic_ranged']
+  boss_minions: ['swarm', 'swarm', 'basic_melee', 'basic_ranged'],
 }
 
 /**
@@ -600,26 +592,26 @@ export const DIFFICULTY_PRESETS = {
     enemyHealthMultiplier: 0.7,
     enemyDamageMultiplier: 0.8,
     spawnRateMultiplier: 0.8,
-    maxEnemies: 300
+    maxEnemies: 300,
   },
   normal: {
     enemyHealthMultiplier: 1.0,
     enemyDamageMultiplier: 1.0,
     spawnRateMultiplier: 1.0,
-    maxEnemies: 500
+    maxEnemies: 500,
   },
   hard: {
     enemyHealthMultiplier: 1.5,
     enemyDamageMultiplier: 1.3,
     spawnRateMultiplier: 1.2,
-    maxEnemies: 700
+    maxEnemies: 700,
   },
   nightmare: {
     enemyHealthMultiplier: 2.0,
     enemyDamageMultiplier: 1.8,
     spawnRateMultiplier: 1.5,
-    maxEnemies: 1000
-  }
+    maxEnemies: 1000,
+  },
 }
 
 /**
@@ -632,9 +624,12 @@ export function getAllEnemyTypes(): EnemyType[] {
 /**
  * Helper function to get enemies by level range
  */
-export function getEnemiesByLevel(minLevel: number, maxLevel: number): EnemyType[] {
+export function getEnemiesByLevel(
+  minLevel: number,
+  maxLevel: number
+): EnemyType[] {
   return getAllEnemyTypes().filter(
-    enemy => enemy.minLevel <= maxLevel && enemy.maxLevel >= minLevel
+    (enemy) => enemy.minLevel <= maxLevel && enemy.maxLevel >= minLevel
   )
 }
 
@@ -655,8 +650,8 @@ export function createCustomWave(
     pattern,
     area: {
       center: { x: 0, y: 0 },
-      radius: 400
+      radius: 400,
     },
-    delay: 3000
+    delay: 3000,
   }
 }

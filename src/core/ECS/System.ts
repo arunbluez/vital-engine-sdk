@@ -23,7 +23,7 @@ export abstract class System implements ISystem {
   protected batchConfig: BatchConfig = {
     batchSize: 100,
     maxBatchTime: 2,
-    enableParallelProcessing: false
+    enableParallelProcessing: false,
   }
 
   /**
@@ -35,12 +35,18 @@ export abstract class System implements ISystem {
    * Batch update method for processing entities in batches
    * Override this method to implement batch processing logic
    */
-  protected updateBatch?(context: SystemUpdateContext, batch: EntityQuery[]): void
+  protected updateBatch?(
+    context: SystemUpdateContext,
+    batch: EntityQuery[]
+  ): void
 
   /**
    * Processes entities using batch processing
    */
-  protected processBatches(context: SystemUpdateContext, entities: EntityQuery[]): void {
+  protected processBatches(
+    context: SystemUpdateContext,
+    entities: EntityQuery[]
+  ): void {
     if (!this._batchProcessor) {
       this._batchProcessor = new BatchProcessor(this.batchConfig)
     }
@@ -100,11 +106,13 @@ export abstract class System implements ISystem {
       enabled: this._enabled,
       entityCount: this._entityCount,
       updateTime: this._lastUpdateTime,
-      batchMetrics: batchMetrics ? {
-        batchesProcessed: batchMetrics.batchesProcessed,
-        averageBatchTime: batchMetrics.averageBatchTime,
-        currentBatchSize: this.batchConfig.batchSize
-      } : undefined
+      batchMetrics: batchMetrics
+        ? {
+            batchesProcessed: batchMetrics.batchesProcessed,
+            averageBatchTime: batchMetrics.averageBatchTime,
+            currentBatchSize: this.batchConfig.batchSize,
+          }
+        : undefined,
     }
   }
 

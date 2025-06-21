@@ -1,4 +1,8 @@
-import { SkillType, SkillTargetType, SkillEffectType } from '../components/Skills'
+import {
+  SkillType,
+  SkillTargetType,
+  SkillEffectType,
+} from '../components/Skills'
 import type { Skill } from '../components/Skills'
 
 /**
@@ -76,7 +80,12 @@ export interface EvolutionPath {
  * Evolution requirement
  */
 export interface EvolutionRequirement {
-  type: 'skill_level' | 'character_level' | 'stat' | 'achievement' | 'other_skill'
+  type:
+    | 'skill_level'
+    | 'character_level'
+    | 'stat'
+    | 'achievement'
+    | 'other_skill'
   value: number | string
   description: string
 }
@@ -111,7 +120,7 @@ export enum SkillRarity {
   UNCOMMON = 'uncommon',
   RARE = 'rare',
   EPIC = 'epic',
-  LEGENDARY = 'legendary'
+  LEGENDARY = 'legendary',
 }
 
 /**
@@ -123,7 +132,7 @@ export enum SkillCategory {
   SUPPORT = 'support',
   MOVEMENT = 'movement',
   DEFENSIVE = 'defensive',
-  UTILITY = 'utility'
+  UTILITY = 'utility',
 }
 
 /**
@@ -132,7 +141,7 @@ export enum SkillCategory {
 export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
   skills: {
     // Basic Attack Skills
-    'rapid_fire': {
+    rapid_fire: {
       id: 'rapid_fire',
       name: 'Rapid Fire',
       description: 'Increases attack speed for a short duration',
@@ -148,15 +157,15 @@ export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
           duration: 5000,
           durationScaling: 500, // +0.5s per level
           chance: 1.0,
-          stackable: false
-        }
+          stackable: false,
+        },
       ],
       rarity: SkillRarity.COMMON,
       category: SkillCategory.COMBAT,
-      evolveInto: ['bullet_storm', 'precision_shots']
+      evolveInto: ['bullet_storm', 'precision_shots'],
     },
 
-    'bullet_storm': {
+    bullet_storm: {
       id: 'bullet_storm',
       name: 'Bullet Storm',
       description: 'Evolved Rapid Fire - Creates a storm of projectiles',
@@ -172,20 +181,19 @@ export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
           radius: 150,
           chance: 1.0,
           stackable: false,
-          metadata: { projectileSpeed: 400, spread: 360 }
-        }
+          metadata: { projectileSpeed: 400, spread: 360 },
+        },
       ],
-      requirements: [
-        { type: 'skill', value: 'rapid_fire', operator: '>=' }
-      ],
+      requirements: [{ type: 'skill', value: 'rapid_fire', operator: '>=' }],
       rarity: SkillRarity.RARE,
-      category: SkillCategory.COMBAT
+      category: SkillCategory.COMBAT,
     },
 
-    'precision_shots': {
+    precision_shots: {
       id: 'precision_shots',
       name: 'Precision Shots',
-      description: 'Evolved Rapid Fire - Every shot has a chance to critically hit',
+      description:
+        'Evolved Rapid Fire - Every shot has a chance to critically hit',
       type: SkillType.PASSIVE,
       targetType: SkillTargetType.SELF,
       maxLevel: 3,
@@ -197,18 +205,16 @@ export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
           levelScaling: 10,
           chance: 1.0,
           stackable: false,
-          metadata: { stat: 'criticalChance' }
-        }
+          metadata: { stat: 'criticalChance' },
+        },
       ],
-      requirements: [
-        { type: 'skill', value: 'rapid_fire', operator: '>=' }
-      ],
+      requirements: [{ type: 'skill', value: 'rapid_fire', operator: '>=' }],
       rarity: SkillRarity.RARE,
-      category: SkillCategory.COMBAT
+      category: SkillCategory.COMBAT,
     },
 
     // Defensive Skills
-    'shield': {
+    shield: {
       id: 'shield',
       name: 'Shield',
       description: 'Creates a protective barrier that absorbs damage',
@@ -225,18 +231,19 @@ export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
           durationScaling: 1000,
           chance: 1.0,
           stackable: false,
-          metadata: { shieldType: 'absorb' }
-        }
+          metadata: { shieldType: 'absorb' },
+        },
       ],
       rarity: SkillRarity.COMMON,
       category: SkillCategory.DEFENSIVE,
-      evolveInto: ['fortress', 'reflective_barrier']
+      evolveInto: ['fortress', 'reflective_barrier'],
     },
 
-    'fortress': {
+    fortress: {
       id: 'fortress',
       name: 'Fortress',
-      description: 'Evolved Shield - Provides immunity to damage for a short time',
+      description:
+        'Evolved Shield - Provides immunity to damage for a short time',
       type: SkillType.ACTIVE,
       targetType: SkillTargetType.SELF,
       maxLevel: 3,
@@ -250,18 +257,16 @@ export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
           durationScaling: 500,
           chance: 1.0,
           stackable: false,
-          metadata: { invulnerable: true }
-        }
+          metadata: { invulnerable: true },
+        },
       ],
-      requirements: [
-        { type: 'skill', value: 'shield', operator: '>=' }
-      ],
+      requirements: [{ type: 'skill', value: 'shield', operator: '>=' }],
       rarity: SkillRarity.EPIC,
-      category: SkillCategory.DEFENSIVE
+      category: SkillCategory.DEFENSIVE,
     },
 
     // Healing Skills
-    'regeneration': {
+    regeneration: {
       id: 'regeneration',
       name: 'Regeneration',
       description: 'Gradually restores health over time',
@@ -277,15 +282,15 @@ export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
           duration: 10000,
           durationScaling: 2000,
           chance: 1.0,
-          stackable: true
-        }
+          stackable: true,
+        },
       ],
       rarity: SkillRarity.COMMON,
       category: SkillCategory.SUPPORT,
-      evolveInto: ['vampiric_aura', 'phoenix_rebirth']
+      evolveInto: ['vampiric_aura', 'phoenix_rebirth'],
     },
 
-    'vampiric_aura': {
+    vampiric_aura: {
       id: 'vampiric_aura',
       name: 'Vampiric Aura',
       description: 'Heals based on damage dealt to enemies',
@@ -300,18 +305,16 @@ export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
           levelScaling: 5,
           chance: 1.0,
           stackable: false,
-          metadata: { lifesteal: true }
-        }
+          metadata: { lifesteal: true },
+        },
       ],
-      requirements: [
-        { type: 'skill', value: 'regeneration', operator: '>=' }
-      ],
+      requirements: [{ type: 'skill', value: 'regeneration', operator: '>=' }],
       rarity: SkillRarity.RARE,
-      category: SkillCategory.SUPPORT
+      category: SkillCategory.SUPPORT,
     },
 
     // Movement Skills
-    'dash': {
+    dash: {
       id: 'dash',
       name: 'Dash',
       description: 'Quickly move to target location',
@@ -326,16 +329,16 @@ export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
           levelScaling: 50,
           chance: 1.0,
           stackable: false,
-          metadata: { instantMovement: true }
-        }
+          metadata: { instantMovement: true },
+        },
       ],
       rarity: SkillRarity.COMMON,
       category: SkillCategory.MOVEMENT,
-      evolveInto: ['teleport', 'shadow_step']
+      evolveInto: ['teleport', 'shadow_step'],
     },
 
     // Magic Skills
-    'fireball': {
+    fireball: {
       id: 'fireball',
       name: 'Fireball',
       description: 'Launches a fireball that explodes on impact',
@@ -353,15 +356,15 @@ export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
           radiusScaling: 10,
           chance: 1.0,
           stackable: false,
-          metadata: { element: 'fire', explosive: true }
-        }
+          metadata: { element: 'fire', explosive: true },
+        },
       ],
       rarity: SkillRarity.UNCOMMON,
       category: SkillCategory.MAGIC,
-      evolveInto: ['meteor', 'chain_lightning']
+      evolveInto: ['meteor', 'chain_lightning'],
     },
 
-    'meteor': {
+    meteor: {
       id: 'meteor',
       name: 'Meteor',
       description: 'Calls down a devastating meteor strike',
@@ -379,19 +382,19 @@ export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
           radiusScaling: 20,
           chance: 1.0,
           stackable: false,
-          metadata: { element: 'fire', delay: 2000 }
-        }
+          metadata: { element: 'fire', delay: 2000 },
+        },
       ],
       requirements: [
         { type: 'skill', value: 'fireball', operator: '>=' },
-        { type: 'level', value: 10, operator: '>=' }
+        { type: 'level', value: 10, operator: '>=' },
       ],
       rarity: SkillRarity.LEGENDARY,
-      category: SkillCategory.MAGIC
+      category: SkillCategory.MAGIC,
     },
 
     // Utility Skills
-    'magnetic_field': {
+    magnetic_field: {
       id: 'magnetic_field',
       name: 'Magnetic Field',
       description: 'Attracts nearby items and experience orbs',
@@ -406,12 +409,12 @@ export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
           levelScaling: 25,
           chance: 1.0,
           stackable: false,
-          metadata: { magnetism: true }
-        }
+          metadata: { magnetism: true },
+        },
       ],
       rarity: SkillRarity.COMMON,
-      category: SkillCategory.UTILITY
-    }
+      category: SkillCategory.UTILITY,
+    },
   },
 
   evolutionTrees: [
@@ -422,19 +425,35 @@ export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
           fromSkillId: 'rapid_fire',
           toSkillId: 'bullet_storm',
           requirements: [
-            { type: 'skill_level', value: 5, description: 'Rapid Fire at max level' },
-            { type: 'character_level', value: 8, description: 'Character level 8+' }
-          ]
+            {
+              type: 'skill_level',
+              value: 5,
+              description: 'Rapid Fire at max level',
+            },
+            {
+              type: 'character_level',
+              value: 8,
+              description: 'Character level 8+',
+            },
+          ],
         },
         {
           fromSkillId: 'rapid_fire',
           toSkillId: 'precision_shots',
           requirements: [
-            { type: 'skill_level', value: 5, description: 'Rapid Fire at max level' },
-            { type: 'stat', value: 'accuracy', description: 'High accuracy stat' }
-          ]
-        }
-      ]
+            {
+              type: 'skill_level',
+              value: 5,
+              description: 'Rapid Fire at max level',
+            },
+            {
+              type: 'stat',
+              value: 'accuracy',
+              description: 'High accuracy stat',
+            },
+          ],
+        },
+      ],
     },
     {
       rootSkillId: 'shield',
@@ -443,11 +462,19 @@ export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
           fromSkillId: 'shield',
           toSkillId: 'fortress',
           requirements: [
-            { type: 'skill_level', value: 5, description: 'Shield at max level' },
-            { type: 'character_level', value: 15, description: 'Character level 15+' }
-          ]
-        }
-      ]
+            {
+              type: 'skill_level',
+              value: 5,
+              description: 'Shield at max level',
+            },
+            {
+              type: 'character_level',
+              value: 15,
+              description: 'Character level 15+',
+            },
+          ],
+        },
+      ],
     },
     {
       rootSkillId: 'fireball',
@@ -456,13 +483,25 @@ export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
           fromSkillId: 'fireball',
           toSkillId: 'meteor',
           requirements: [
-            { type: 'skill_level', value: 5, description: 'Fireball at max level' },
-            { type: 'character_level', value: 20, description: 'Character level 20+' },
-            { type: 'other_skill', value: 'magic_mastery', description: 'Magic Mastery skill learned' }
-          ]
-        }
-      ]
-    }
+            {
+              type: 'skill_level',
+              value: 5,
+              description: 'Fireball at max level',
+            },
+            {
+              type: 'character_level',
+              value: 20,
+              description: 'Character level 20+',
+            },
+            {
+              type: 'other_skill',
+              value: 'magic_mastery',
+              description: 'Magic Mastery skill learned',
+            },
+          ],
+        },
+      ],
+    },
   ],
 
   skillSets: [
@@ -471,59 +510,77 @@ export const DEFAULT_SKILL_DATABASE: SkillDatabase = {
       name: 'Warrior',
       description: 'Focused on melee combat and defense',
       startingSkills: ['rapid_fire', 'shield'],
-      availableSkills: ['rapid_fire', 'shield', 'dash', 'fortress', 'bullet_storm'],
+      availableSkills: [
+        'rapid_fire',
+        'shield',
+        'dash',
+        'fortress',
+        'bullet_storm',
+      ],
       bonuses: [
         {
           skillCount: 2,
           bonusType: 'damage',
           value: 10,
-          description: '+10% damage with 2+ warrior skills'
+          description: '+10% damage with 2+ warrior skills',
         },
         {
           skillCount: 4,
           bonusType: 'cooldown',
           value: 15,
-          description: '-15% cooldown with 4+ warrior skills'
-        }
-      ]
+          description: '-15% cooldown with 4+ warrior skills',
+        },
+      ],
     },
     {
       id: 'mage',
       name: 'Mage',
       description: 'Master of magical arts and elemental damage',
       startingSkills: ['fireball', 'magnetic_field'],
-      availableSkills: ['fireball', 'meteor', 'chain_lightning', 'regeneration', 'vampiric_aura'],
+      availableSkills: [
+        'fireball',
+        'meteor',
+        'chain_lightning',
+        'regeneration',
+        'vampiric_aura',
+      ],
       bonuses: [
         {
           skillCount: 2,
           bonusType: 'effect',
           value: 20,
-          description: '+20% spell effect with 2+ mage skills'
+          description: '+20% spell effect with 2+ mage skills',
         },
         {
           skillCount: 4,
           bonusType: 'stat',
           value: 50,
-          description: '+50 mana with 4+ mage skills'
-        }
-      ]
+          description: '+50 mana with 4+ mage skills',
+        },
+      ],
     },
     {
       id: 'survivor',
       name: 'Survivor',
       description: 'Balanced approach focusing on sustainability',
       startingSkills: ['regeneration', 'magnetic_field'],
-      availableSkills: ['regeneration', 'vampiric_aura', 'shield', 'dash', 'magnetic_field'],
+      availableSkills: [
+        'regeneration',
+        'vampiric_aura',
+        'shield',
+        'dash',
+        'magnetic_field',
+      ],
       bonuses: [
         {
           skillCount: 3,
           bonusType: 'stat',
           value: 25,
-          description: '+25% health with 3+ survivor skills'
-        }
-      ]
-    }
-  ]
+          description: '+25% health with 3+ survivor skills',
+        },
+      ],
+    },
+  ],
 }
 
 /**
@@ -547,9 +604,9 @@ export const DEFAULT_SKILL_SELECTION_CONFIG: SkillSelectionConfig = {
     [SkillRarity.UNCOMMON]: 0.3,
     [SkillRarity.RARE]: 0.15,
     [SkillRarity.EPIC]: 0.04,
-    [SkillRarity.LEGENDARY]: 0.01
+    [SkillRarity.LEGENDARY]: 0.01,
   },
   levelUpSkillCount: 3,
   evolutionChance: 0.2, // 20% chance to offer evolution instead of new skill
-  duplicateSkillHandling: 'upgrade'
+  duplicateSkillHandling: 'upgrade',
 }

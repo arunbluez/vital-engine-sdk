@@ -13,20 +13,33 @@ import {
     CollectibleComponent,
     MagnetComponent,
     EnemyAIComponent,
+    DifficultyComponent,
+    SpawnerComponent,
     MovementSystem,
     CombatSystem,
     ProgressionSystem,
     EconomySystem,
     SkillSystem,
     EnemySystem,
-    SimpleCollectionSystem,
+    CollectionSystem,
+    DifficultySystem,
+    SpawnSystem,
+    AISystem,
     GameEventType,
     AIBehaviorState,
     AIBehaviorType,
     SkillType,
     SkillTargetType,
     SkillEffectType,
-    type EntityDestroyedEventData
+    SpawnPattern,
+    SpawnTiming,
+    PathfindingType,
+    DEFAULT_SKILL_DATABASE,
+    type EntityDestroyedEventData,
+    type CollectibleType,
+    type SpawnWave,
+    type EnemyType,
+    type SkillDatabase
 } from 'vital-engine-sdk'
 
 import { Renderer } from './renderer'
@@ -128,14 +141,39 @@ class GameFrontend {
         this.setupSystems()
         this.setupEventListeners()
         this.createPlayer()
-        this.createEnemies(20)
-        this.createCollectibles(5)
+        this.createEnemies(15) // Reduced initial enemies since spawner will add more
+        this.createCollectibles(8) // More collectibles for testing
+        this.createSpawner() // Add dynamic spawning
         
-        console.log('🔍 Game initialization complete.')
-        console.log('Press Q to test Phase 3 features individually')
+        console.log('🎮 === VITAL ENGINE SDK FRONTEND DEMO ===')
+        console.log('✅ Game initialization complete with advanced features!')
+        console.log('')
+        console.log('🎯 CONTROLS:')
+        console.log('  WASD - Move player')
+        console.log('  Mouse - Aim (auto-fire)')
+        console.log('  Space - Use Area Blast skill')
+        console.log('  R - Restart game')
+        console.log('  Q - Advanced features testing menu')
+        console.log('')
+        console.log('🎮 FEATURES ENABLED:')
+        console.log('  ✅ Skills System (with database integration)')
+        console.log('  ✅ Enemy AI System')
+        console.log('  ✅ Collection System') 
+        console.log('  ✅ Spawning System (3 waves)')
+        console.log('  ✅ Difficulty System (auto-scaling)')
+        console.log('  ✅ Advanced AI System')
+        console.log('')
+        console.log('📊 GAME STATS:')
         console.log('Player ID:', this.playerId)
-        console.log('Enemy IDs:', this.enemyIds)
+        console.log('Initial enemies:', this.enemyIds.length)
         console.log('World stats:', this.world.getStats())
+        console.log('')
+        console.log('🎯 Watch for different colored collectibles:')
+        console.log('  🔵 Cyan = Experience')
+        console.log('  🔴 Red = Health')
+        console.log('  🟦 Blue = Mana') 
+        console.log('  🟡 Yellow = Currency')
+        console.log('')
         
         // Start the engine
         this.engine.start()
@@ -146,18 +184,26 @@ class GameFrontend {
     }
     
     private setupSystems(): void {
-        // Initialize basic systems
+        // Initialize core systems
         this.world.addSystem(new MovementSystem(this.events))
         this.world.addSystem(new CombatSystem(this.events, this.world))
         this.world.addSystem(new ProgressionSystem(this.events, this.world))
         this.world.addSystem(new EconomySystem(this.events, this.world))
         
-        // Phase 3 Systems - Now enabled by default
+        // Advanced game systems
         this.world.addSystem(new SkillSystem(this.events, this.world as any))
-        this.world.addSystem(new SimpleCollectionSystem(this.events, this.world as any))
+        this.world.addSystem(new CollectionSystem(this.events, this.world as any))
         this.world.addSystem(new EnemySystem(this.events, this.world as any))
+        this.world.addSystem(new DifficultySystem(this.events, this.world as any))
+        this.world.addSystem(new SpawnSystem(this.events, this.world as any))
+        this.world.addSystem(new AISystem(this.events, this.world as any, {
+            pathfindingType: PathfindingType.A_STAR,
+            maxPathfindingNodes: 1000,
+            enableGroupBehavior: true,
+            enableFlocking: false
+        }))
         
-        console.log('🎮 All systems initialized including Phase 3 (Skills, Enemy AI, Collection)')
+        console.log('🎮 All systems initialized including advanced features (AI, Spawning, Difficulty, Collection)')
     }
     
     private setupEventListeners(): void {
@@ -201,10 +247,28 @@ class GameFrontend {
             console.log('📈 Skill leveled up:', event.data)
         })
         
-        // Phase 3: Collection events
-        // this.events.on('COLLECTIBLE_COLLECTED', (event) => {
-        //     console.log('💎 Collectible collected:', event.data)
-        // })
+        // Collection events
+        this.events.on('COLLECTIBLE_COLLECTED', (event) => {
+            console.log('💎 Collectible collected:', event.data)
+        })
+        
+        // Difficulty events
+        this.events.on('DIFFICULTY_CHANGED', (event) => {
+            console.log('📈 Difficulty changed:', event.data)
+        })
+        
+        // Spawn events
+        this.events.on('ENEMY_SPAWNED', (event) => {
+            console.log('👾 Enemy spawned:', event.data)
+        })
+        
+        this.events.on('WAVE_STARTED', (event) => {
+            console.log('🌊 Wave started:', event.data)
+        })
+        
+        this.events.on('WAVE_COMPLETED', (event) => {
+            console.log('✅ Wave completed:', event.data)
+        })
         
         // Handle input
         this.input.on('move', (direction: InputDirection) => {
@@ -258,6 +322,12 @@ class GameFrontend {
                 case 3:
                     this.testCollectionSystem()
                     break
+                case 4:
+                    this.testSpawningSystem()
+                    break
+                case 5:
+                    this.testDifficultySystem()
+                    break
             }
         })
         
@@ -285,46 +355,43 @@ class GameFrontend {
             player.addComponent(new ExperienceComponent(1))
             player.addComponent(new InventoryComponent(20))
         
-        // Add skills component
+        // Add skills component with skill database integration
         try {
             const skills = new SkillsComponent()
             
-            skills.addSkill({
-                id: 'damage_boost',
-                name: 'Combat Training',
-                description: 'Increases damage by 25%',
-                type: SkillType.PASSIVE,
-                targetType: SkillTargetType.SELF,
-                level: 1,
-                maxLevel: 5,
-                cooldown: 0,
-                lastUsed: 0,
-                effects: [{
-                    type: SkillEffectType.ATTRIBUTE_MODIFY,
-                    value: 0.25, // 25% increase
-                    stackable: false
-                }]
+            // Load skills from the default skill database
+            const skillDatabase: SkillDatabase = DEFAULT_SKILL_DATABASE
+            
+            // Add some starter skills from the database
+            const starterSkillIds = ['damage_boost', 'health_regeneration', 'movement_speed']
+            
+            starterSkillIds.forEach(skillId => {
+                const skillTemplate = skillDatabase.skills[skillId]
+                if (skillTemplate) {
+                    // Convert skill template to actual skill
+                    const skill = {
+                        id: skillTemplate.id,
+                        name: skillTemplate.name,
+                        description: skillTemplate.description,
+                        type: skillTemplate.type as SkillType,
+                        targetType: skillTemplate.targetType as SkillTargetType,
+                        level: 1,
+                        maxLevel: skillTemplate.maxLevel,
+                        cooldown: skillTemplate.cooldown || 0,
+                        lastUsed: 0,
+                        effects: skillTemplate.effects.map(effect => ({
+                            type: effect.type as SkillEffectType,
+                            value: effect.baseValue,
+                            duration: effect.duration,
+                            stackable: effect.stackable || false
+                        }))
+                    }
+                    skills.addSkill(skill)
+                    console.log(`Added skill from database: ${skill.name}`)
+                }
             })
             
-            skills.addSkill({
-                id: 'regeneration',
-                name: 'Natural Healing',
-                description: 'Regenerates 1 HP every second',
-                type: SkillType.PASSIVE,
-                targetType: SkillTargetType.SELF, 
-                level: 1,
-                maxLevel: 3,
-                cooldown: 0,
-                lastUsed: 0,
-                effects: [{
-                    type: SkillEffectType.HEAL,
-                    value: 1, // 1 HP per tick
-                    duration: -1, // Permanent
-                    stackable: false
-                }]
-            })
-            
-            // Add an active area damage skill
+            // Add a custom area blast skill not in database
             skills.addSkill({
                 id: 'area_blast',
                 name: 'Area Blast',
@@ -343,7 +410,7 @@ class GameFrontend {
             })
             
             player.addComponent(skills)
-            console.log('Added skills component with skills:', Array.from(skills.skills.keys()))
+            console.log('Added skills component with database skills:', Array.from(skills.skills.keys()))
         } catch (error) {
             console.error('Failed to add skills component:', error)
         }
@@ -354,6 +421,15 @@ class GameFrontend {
             player.addComponent(magnet)
         } catch (error) {
             console.error('Failed to add magnet component:', error)
+        }
+        
+        // Add difficulty component to track game progression
+        try {
+            const difficulty = new DifficultyComponent()
+            player.addComponent(difficulty)
+            console.log('Added difficulty component to player')
+        } catch (error) {
+            console.error('Failed to add difficulty component:', error)
         }
         
         this.createOrbitingProjectiles()
@@ -421,11 +497,94 @@ class GameFrontend {
             collectible.addComponent(new TransformComponent(x, y))
             
             try {
-                const collectibleComp = new CollectibleComponent('experience' as any, 0)
+                // Use proper CollectibleType enum values
+                const types: CollectibleType[] = ['CURRENCY', 'EXPERIENCE', 'HEALTH', 'MANA'] as CollectibleType[]
+                const randomType = types[Math.floor(Math.random() * types.length)]
+                const value = randomType === 'EXPERIENCE' ? 15 : 
+                              randomType === 'HEALTH' ? 25 :
+                              randomType === 'MANA' ? 20 : 5
+                
+                const collectibleComp = new CollectibleComponent(randomType, value)
                 collectible.addComponent(collectibleComp)
+                console.log(`Created ${randomType} collectible with value ${value}`)
             } catch (error) {
                 console.error('Failed to create collectible component:', error)
             }
+        }
+    }
+    
+    private createSpawner(): void {
+        try {
+            const spawner = this.world.createEntity()
+            spawner.addComponent(new TransformComponent(400, 300)) // Center of screen
+            
+            const spawnerComp = new SpawnerComponent()
+            
+            // Define enemy types for spawning
+            const basicEnemy: EnemyType = {
+                name: 'Basic Enemy',
+                health: 40,
+                damage: 8,
+                speed: 60,
+                xpReward: 10,
+                spawnWeight: 1.0
+            }
+            
+            const fastEnemy: EnemyType = {
+                name: 'Fast Enemy', 
+                health: 25,
+                damage: 6,
+                speed: 100,
+                xpReward: 15,
+                spawnWeight: 0.7
+            }
+            
+            const tankEnemy: EnemyType = {
+                name: 'Tank Enemy',
+                health: 80,
+                damage: 15,
+                speed: 30,
+                xpReward: 25,
+                spawnWeight: 0.3
+            }
+            
+            // Create spawn waves
+            const wave1: SpawnWave = {
+                enemyTypes: [basicEnemy],
+                spawnCount: 3,
+                spawnInterval: 2000, // 2 seconds between spawns
+                duration: 10000, // 10 seconds total
+                startDelay: 5000 // Start after 5 seconds
+            }
+            
+            const wave2: SpawnWave = {
+                enemyTypes: [basicEnemy, fastEnemy],
+                spawnCount: 5,
+                spawnInterval: 1500,
+                duration: 15000,
+                startDelay: 20000 // Start after first wave
+            }
+            
+            const wave3: SpawnWave = {
+                enemyTypes: [basicEnemy, fastEnemy, tankEnemy],
+                spawnCount: 4,
+                spawnInterval: 3000,
+                duration: 20000,
+                startDelay: 40000
+            }
+            
+            spawnerComp.waves = [wave1, wave2, wave3]
+            spawnerComp.pattern = SpawnPattern.WAVE_BASED
+            spawnerComp.timing = SpawnTiming.TIMED
+            spawnerComp.spawnRadius = 300 // Spawn enemies 300 pixels from center
+            spawnerComp.maxEnemies = 25 // Maximum enemies on screen
+            spawnerComp.isActive = true
+            
+            spawner.addComponent(spawnerComp)
+            console.log('🌊 Spawner created with 3 waves of enemies')
+            
+        } catch (error) {
+            console.error('Failed to create spawner:', error)
         }
     }
     
@@ -435,13 +594,15 @@ class GameFrontend {
         this.orbitingProjectiles = []
         this.deadEnemies.clear()
         this.enemyIds = []
+        this.areaEffects = []
         
         this.setupSystems()
         this.createPlayer()
-        this.createEnemies(8)
-        this.createCollectibles(5)
+        this.createEnemies(10)
+        this.createCollectibles(8)
+        this.createSpawner()
         
-        console.log('Game restarted')
+        console.log('Game restarted with new features')
     }
     
     private gameLoop = (): void => {
@@ -558,9 +719,28 @@ class GameFrontend {
                 size = 12
             } else if (entity.hasComponent('collectible')) {
                 const collectible = entity.getComponent('collectible') as CollectibleComponent
-                if (collectible && collectible.collectibleType === 'experience') {
-                    color = '#00ffff'
-                    size = 6
+                if (collectible) {
+                    switch (collectible.collectibleType) {
+                        case 'EXPERIENCE':
+                            color = '#00ffff' // Cyan for experience
+                            size = 6
+                            break
+                        case 'HEALTH':
+                            color = '#ff0000' // Red for health
+                            size = 7
+                            break
+                        case 'MANA':
+                            color = '#0066ff' // Blue for mana
+                            size = 7
+                            break
+                        case 'CURRENCY':
+                            color = '#ffff00' // Yellow for currency
+                            size = 8
+                            break
+                        default:
+                            color = '#ffffff' // White for unknown
+                            size = 6
+                    }
                 } else {
                     color = '#ffff00'
                     size = 8
@@ -1156,18 +1336,20 @@ class GameFrontend {
     
     private showTestMenu(): void {
         console.clear()
-        console.log('🧪 === PHASE 3 TESTING MENU ===')
+        console.log('🧪 === ADVANCED FEATURES TESTING MENU ===')
         console.log('Press a number to test each feature individually:')
         console.log('1️⃣  Test Skills System')
         console.log('2️⃣  Test Enemy AI System') 
         console.log('3️⃣  Test Collection System')
-        console.log('================================')
+        console.log('4️⃣  Test Spawning System')
+        console.log('5️⃣  Test Difficulty System')
+        console.log('==========================================')
     }
     
     private testSkillsSystem(): void {
         console.clear()
         console.log('🎯 === TESTING SKILLS SYSTEM ===')
-        console.log('Skills System is already enabled!')
+        console.log('Skills System with Database Integration enabled!')
         
         const player = this.world.getEntity(this.playerId!)
         if (player) {
@@ -1175,19 +1357,28 @@ class GameFrontend {
             const skills = player.getComponent('skills') as SkillsComponent
             if (skills) {
                 console.log('✅ Skills System is working!')
-                console.log(`Player has ${skills.skills.size} skills:`)
+                console.log(`Player has ${skills.skills.size} skills loaded from database:`)
                 Array.from(skills.skills.values()).forEach(skill => {
                     console.log(`   - ${skill.name}: ${skill.description}`)
-                    console.log(`     Type: ${skill.type}, Effects: ${skill.effects.length}`)
+                    console.log(`     Type: ${skill.type}, Level: ${skill.level}/${skill.maxLevel}`)
+                    console.log(`     Effects: ${skill.effects.length}`)
                 })
                 console.log(`Active effects: ${skills.activeEffects.length}`)
+                console.log('')
+                console.log('🌟 Skill Database Features:')
+                console.log('  - Skills loaded from DEFAULT_SKILL_DATABASE')
+                console.log('  - Configurable templates with evolution paths')
+                console.log('  - Automatic effect application')
+                console.log('  - Skill progression and leveling')
+                console.log('')
                 console.log('👀 Skills should apply passive effects automatically')
-                console.log('💡 Expected: Damage boost and health regeneration')
+                console.log('💡 Expected: Damage boost, health regen, movement speed')
+                console.log('⚡ Press Space to use Area Blast active skill!')
             } else {
                 console.log('❌ No skills component found')
             }
         }
-        console.log('Press Q for menu, or 2/3 for other tests')
+        console.log('Press Q for menu, or 2/3/4/5 for other tests')
     }
     
     private testEnemyAI(): void {
@@ -1358,7 +1549,69 @@ class GameFrontend {
                 console.log('❌ No magnet component found on player')
             }
         }
-        console.log('Press Q for menu, or 1/2 for other tests')
+        console.log('Press Q for menu, or 1/2/4/5 for other tests')
+    }
+    
+    private testSpawningSystem(): void {
+        console.clear()
+        console.log('🌊 === TESTING SPAWNING SYSTEM ===')
+        console.log('Spawning System is already enabled!')
+        
+        const spawners = this.world.getActiveEntities().filter((e: Entity) => 
+            e.hasComponent('spawner')
+        )
+        
+        console.log(`🔍 Diagnostics:`)
+        console.log(`  Active spawners: ${spawners.length}`)
+        
+        if (spawners.length > 0) {
+            console.log('✅ Spawning System enabled!')
+            const firstSpawner = spawners[0]
+            console.log('🔍 First spawner components:', firstSpawner.getComponentTypes())
+            const spawnerComp = firstSpawner.getComponent('spawner') as SpawnerComponent
+            if (spawnerComp) {
+                console.log(`  Wave count: ${spawnerComp.waves.length}`)
+                console.log(`  Pattern: ${spawnerComp.pattern}`)
+                console.log(`  Max enemies: ${spawnerComp.maxEnemies}`)
+                console.log(`  Active: ${spawnerComp.isActive}`)
+                console.log(`  Current wave: ${spawnerComp.currentWaveIndex}`)
+            }
+            console.log('👀 Watch for new enemies to spawn in waves!')
+            console.log('🎮 Enemies should appear at regular intervals')
+        } else {
+            console.log('❌ No spawners found!')
+        }
+        console.log('Press Q for menu, or 1/2/3/5 for other tests')
+    }
+    
+    private testDifficultySystem(): void {
+        console.clear()
+        console.log('📈 === TESTING DIFFICULTY SYSTEM ===')
+        console.log('Difficulty System is already enabled!')
+        
+        const player = this.world.getEntity(this.playerId!)
+        if (player) {
+            const difficulty = player.getComponent('difficulty') as DifficultyComponent
+            if (difficulty) {
+                console.log('✅ Difficulty System enabled!')
+                console.log(`  Current level: ${difficulty.currentLevel}`)
+                console.log(`  Time survived: ${difficulty.timeSurvived}ms`)
+                console.log(`  Enemies killed: ${difficulty.enemiesKilled}`)
+                console.log(`  Level progression rate: ${difficulty.levelProgressionRate}`)
+                console.log(`  Next level threshold: ${difficulty.nextLevelThreshold}`)
+                
+                console.log('📊 Current modifiers:')
+                difficulty.currentModifiers.forEach((modifier, index) => {
+                    console.log(`    ${index + 1}. ${modifier.name}: ${modifier.value} (${modifier.type})`)
+                })
+                
+                console.log('👀 Difficulty increases over time and with enemy kills!')
+                console.log('🎮 Enemy stats will scale up as difficulty increases')
+            } else {
+                console.log('❌ No difficulty component found on player')
+            }
+        }
+        console.log('Press Q for menu, or 1/2/3/4 for other tests')
     }
 }
 

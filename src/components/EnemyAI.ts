@@ -13,32 +13,32 @@ export enum AIBehaviorState {
   FLEEING = 'fleeing',
   PATROLLING = 'patrolling',
   STUNNED = 'stunned',
-  DEAD = 'dead'
+  DEAD = 'dead',
 }
 
 /**
  * AI behavior types
  */
 export enum AIBehaviorType {
-  AGGRESSIVE = 'aggressive',     // Always seeks and attacks
-  DEFENSIVE = 'defensive',       // Attacks when threatened
-  PASSIVE = 'passive',          // Avoids combat
-  PACK = 'pack',               // Coordinates with nearby allies
-  ELITE = 'elite',             // Complex behavior patterns
-  BOSS = 'boss'                // Multi-phase behavior
+  AGGRESSIVE = 'aggressive', // Always seeks and attacks
+  DEFENSIVE = 'defensive', // Attacks when threatened
+  PASSIVE = 'passive', // Avoids combat
+  PACK = 'pack', // Coordinates with nearby allies
+  ELITE = 'elite', // Complex behavior patterns
+  BOSS = 'boss', // Multi-phase behavior
 }
 
 /**
  * Movement patterns for AI
  */
 export enum MovementPattern {
-  DIRECT = 'direct',           // Move directly toward target
-  CIRCULAR = 'circular',       // Circle around target
-  ZIGZAG = 'zigzag',          // Zigzag approach
-  RETREAT = 'retreat',         // Move away from target
-  PATROL = 'patrol',           // Follow patrol points
-  SWARM = 'swarm',            // Group movement behavior
-  TELEPORT = 'teleport'        // Instant position changes
+  DIRECT = 'direct', // Move directly toward target
+  CIRCULAR = 'circular', // Circle around target
+  ZIGZAG = 'zigzag', // Zigzag approach
+  RETREAT = 'retreat', // Move away from target
+  PATROL = 'patrol', // Follow patrol points
+  SWARM = 'swarm', // Group movement behavior
+  TELEPORT = 'teleport', // Instant position changes
 }
 
 /**
@@ -152,14 +152,16 @@ export class EnemyAIComponent extends Component {
       {
         fromState: AIBehaviorState.IDLE,
         toState: AIBehaviorState.SEEKING,
-        condition: (factors) => factors.nearbyEnemies > 0 && factors.distanceToTarget < this.detectionRange,
-        priority: 2
+        condition: (factors) =>
+          factors.nearbyEnemies > 0 &&
+          factors.distanceToTarget < this.detectionRange,
+        priority: 2,
       },
       {
         fromState: AIBehaviorState.IDLE,
         toState: AIBehaviorState.PATROLLING,
         condition: () => this.patrolPoints.length > 0,
-        priority: 1
+        priority: 1,
       },
 
       // From SEEKING transitions
@@ -167,19 +169,20 @@ export class EnemyAIComponent extends Component {
         fromState: AIBehaviorState.SEEKING,
         toState: AIBehaviorState.ATTACKING,
         condition: (factors) => factors.distanceToTarget <= this.attackRange,
-        priority: 3
+        priority: 3,
       },
       {
         fromState: AIBehaviorState.SEEKING,
         toState: AIBehaviorState.FLEEING,
         condition: (factors) => factors.healthPercentage < this.fleeThreshold,
-        priority: 4
+        priority: 4,
       },
       {
         fromState: AIBehaviorState.SEEKING,
         toState: AIBehaviorState.IDLE,
-        condition: (factors) => factors.distanceToTarget > this.loseTargetDistance,
-        priority: 1
+        condition: (factors) =>
+          factors.distanceToTarget > this.loseTargetDistance,
+        priority: 1,
       },
 
       // From ATTACKING transitions
@@ -187,35 +190,40 @@ export class EnemyAIComponent extends Component {
         fromState: AIBehaviorState.ATTACKING,
         toState: AIBehaviorState.FLEEING,
         condition: (factors) => factors.healthPercentage < this.fleeThreshold,
-        priority: 4
+        priority: 4,
       },
       {
         fromState: AIBehaviorState.ATTACKING,
         toState: AIBehaviorState.SEEKING,
         condition: (factors) => factors.distanceToTarget > this.attackRange,
-        priority: 2
+        priority: 2,
       },
 
       // From FLEEING transitions
       {
         fromState: AIBehaviorState.FLEEING,
         toState: AIBehaviorState.SEEKING,
-        condition: (factors) => factors.healthPercentage > this.fleeThreshold + 0.2 && factors.distanceToTarget < this.detectionRange,
-        priority: 2
+        condition: (factors) =>
+          factors.healthPercentage > this.fleeThreshold + 0.2 &&
+          factors.distanceToTarget < this.detectionRange,
+        priority: 2,
       },
       {
         fromState: AIBehaviorState.FLEEING,
         toState: AIBehaviorState.IDLE,
-        condition: (factors) => factors.distanceToTarget > this.loseTargetDistance,
-        priority: 1
+        condition: (factors) =>
+          factors.distanceToTarget > this.loseTargetDistance,
+        priority: 1,
       },
 
       // From PATROLLING transitions
       {
         fromState: AIBehaviorState.PATROLLING,
         toState: AIBehaviorState.SEEKING,
-        condition: (factors) => factors.nearbyEnemies > 0 && factors.distanceToTarget < this.detectionRange,
-        priority: 3
+        condition: (factors) =>
+          factors.nearbyEnemies > 0 &&
+          factors.distanceToTarget < this.detectionRange,
+        priority: 3,
       },
 
       // Universal transitions
@@ -223,8 +231,8 @@ export class EnemyAIComponent extends Component {
         fromState: AIBehaviorState.STUNNED,
         toState: AIBehaviorState.IDLE,
         condition: (factors) => factors.timeSinceLastAction > 2000, // 2 second stun duration
-        priority: 5
-      }
+        priority: 5,
+      },
     ]
   }
 
@@ -289,8 +297,8 @@ export class EnemyAIComponent extends Component {
 
     // const previousState = this.currentState // Kept for future use
     const validTransitions = this.stateTransitions
-      .filter(transition => transition.fromState === this.currentState)
-      .filter(transition => transition.condition(factors))
+      .filter((transition) => transition.fromState === this.currentState)
+      .filter((transition) => transition.condition(factors))
       .sort((a, b) => b.priority - a.priority)
 
     if (validTransitions.length > 0) {
@@ -322,7 +330,9 @@ export class EnemyAIComponent extends Component {
    */
   queueAction(action: AIAction): void {
     // Insert action based on priority
-    const insertIndex = this.actionQueue.findIndex(a => a.priority < action.priority)
+    const insertIndex = this.actionQueue.findIndex(
+      (a) => a.priority < action.priority
+    )
     if (insertIndex === -1) {
       this.actionQueue.push(action)
     } else {
@@ -338,35 +348,40 @@ export class EnemyAIComponent extends Component {
   }
 
   /**
+   * Adds a patrol point for patrolling behavior
+   */
+  addPatrolPoint(position: Vector2, waitTime: number): void {
+    this.patrolPoints.push({
+      position,
+      waitTime,
+    })
+  }
+
+  /**
+   * Gets the current patrol target position
+   */
+  getCurrentPatrolTarget(): Vector2 | null {
+    if (this.patrolPoints.length === 0) {
+      return null
+    }
+    return this.patrolPoints[this.currentPatrolIndex]?.position ?? null
+  }
+
+  /**
    * Clears all queued actions
    */
   clearActions(): void {
     this.actionQueue = []
   }
 
-  /**
-   * Adds a patrol point
-   */
-  addPatrolPoint(position: Vector2, waitTime: number = 2000): void {
-    this.patrolPoints.push({ position, waitTime })
-  }
-
-  /**
-   * Gets the current patrol target
-   */
-  getCurrentPatrolTarget(): PatrolPoint | null {
-    if (this.patrolPoints.length === 0) {
-      return null
-    }
-    return this.patrolPoints[this.currentPatrolIndex]
-  }
 
   /**
    * Advances to the next patrol point
    */
   nextPatrolPoint(): void {
     if (this.patrolPoints.length > 0) {
-      this.currentPatrolIndex = (this.currentPatrolIndex + 1) % this.patrolPoints.length
+      this.currentPatrolIndex =
+        (this.currentPatrolIndex + 1) % this.patrolPoints.length
     }
   }
 
@@ -377,7 +392,7 @@ export class EnemyAIComponent extends Component {
     this.lastDamageTime = currentTime
     this.lastDamageSource = sourceId
     this.threatLevel = Math.min(this.threatLevel + amount / 100, 1.0)
-    
+
     // Store in memory
     this.memory.set('lastDamage', { amount, sourceId, time: currentTime })
   }
@@ -407,13 +422,15 @@ export class EnemyAIComponent extends Component {
    * Calculates movement direction based on pattern
    */
   calculateMovementDirection(
-    currentPosition: Vector2, 
-    targetPosition: Vector2, 
+    currentPosition: Vector2,
+    targetPosition: Vector2,
     currentTime: number
   ): Vector2 {
     switch (this.movementPattern) {
       case MovementPattern.DIRECT:
-        return Vector2Math.normalize(Vector2Math.subtract(targetPosition, currentPosition))
+        return Vector2Math.normalize(
+          Vector2Math.subtract(targetPosition, currentPosition)
+        )
 
       case MovementPattern.CIRCULAR:
         const toTarget = Vector2Math.subtract(targetPosition, currentPosition)
@@ -426,18 +443,24 @@ export class EnemyAIComponent extends Component {
         return Vector2Math.normalize(toTarget)
 
       case MovementPattern.ZIGZAG:
-        const direct = Vector2Math.normalize(Vector2Math.subtract(targetPosition, currentPosition))
+        const direct = Vector2Math.normalize(
+          Vector2Math.subtract(targetPosition, currentPosition)
+        )
         const zigzagOffset = Math.sin(currentTime * 0.01) * 0.5
         return {
           x: direct.x + zigzagOffset * direct.y,
-          y: direct.y - zigzagOffset * direct.x
+          y: direct.y - zigzagOffset * direct.x,
         }
 
       case MovementPattern.RETREAT:
-        return Vector2Math.normalize(Vector2Math.subtract(currentPosition, targetPosition))
+        return Vector2Math.normalize(
+          Vector2Math.subtract(currentPosition, targetPosition)
+        )
 
       default:
-        return Vector2Math.normalize(Vector2Math.subtract(targetPosition, currentPosition))
+        return Vector2Math.normalize(
+          Vector2Math.subtract(targetPosition, currentPosition)
+        )
     }
   }
 
@@ -459,42 +482,47 @@ export class EnemyAIComponent extends Component {
 
   clone(): EnemyAIComponent {
     const clone = new EnemyAIComponent(this.behaviorType)
-    
+
     // Copy all properties
     clone.currentState = this.currentState
     clone.previousState = this.previousState
     clone.stateEnterTime = this.stateEnterTime
     clone.stateUpdateInterval = this.stateUpdateInterval
-    
+
     clone.targetEntityId = this.targetEntityId
-    clone.lastKnownTargetPosition = this.lastKnownTargetPosition ? { ...this.lastKnownTargetPosition } : null
+    clone.lastKnownTargetPosition = this.lastKnownTargetPosition
+      ? { ...this.lastKnownTargetPosition }
+      : null
     clone.detectionRange = this.detectionRange
     clone.attackRange = this.attackRange
     clone.loseTargetDistance = this.loseTargetDistance
-    
+
     clone.movementPattern = this.movementPattern
     clone.moveSpeed = this.moveSpeed
-    clone.patrolPoints = this.patrolPoints.map(p => ({ ...p, position: { ...p.position } }))
+    clone.patrolPoints = this.patrolPoints.map((p) => ({
+      ...p,
+      position: { ...p.position },
+    }))
     clone.currentPatrolIndex = this.currentPatrolIndex
     clone.lastPatrolTime = this.lastPatrolTime
-    
+
     clone.aggressionLevel = this.aggressionLevel
     clone.fleeThreshold = this.fleeThreshold
     clone.groupRadius = this.groupRadius
     clone.reactionTime = this.reactionTime
-    
-    clone.actionQueue = this.actionQueue.map(a => ({ ...a }))
+
+    clone.actionQueue = this.actionQueue.map((a) => ({ ...a }))
     clone.lastActionTime = this.lastActionTime
     clone.actionCooldown = this.actionCooldown
     clone.lastDecisionTime = this.lastDecisionTime
-    
-    clone.stateTransitions = this.stateTransitions.map(t => ({ ...t }))
-    
+
+    clone.stateTransitions = this.stateTransitions.map((t) => ({ ...t }))
+
     clone.memory = new Map(this.memory)
     clone.lastDamageTime = this.lastDamageTime
     clone.lastDamageSource = this.lastDamageSource
     clone.threatLevel = this.threatLevel
-    
+
     clone.lastUpdateTime = this.lastUpdateTime
     clone.updatePriority = this.updatePriority
 
@@ -508,36 +536,36 @@ export class EnemyAIComponent extends Component {
       previousState: this.previousState,
       stateEnterTime: this.stateEnterTime,
       stateUpdateInterval: this.stateUpdateInterval,
-      
+
       targetEntityId: this.targetEntityId,
       lastKnownTargetPosition: this.lastKnownTargetPosition,
       detectionRange: this.detectionRange,
       attackRange: this.attackRange,
       loseTargetDistance: this.loseTargetDistance,
-      
+
       movementPattern: this.movementPattern,
       moveSpeed: this.moveSpeed,
       patrolPoints: this.patrolPoints,
       currentPatrolIndex: this.currentPatrolIndex,
       lastPatrolTime: this.lastPatrolTime,
-      
+
       aggressionLevel: this.aggressionLevel,
       fleeThreshold: this.fleeThreshold,
       groupRadius: this.groupRadius,
       reactionTime: this.reactionTime,
-      
+
       actionQueue: this.actionQueue,
       lastActionTime: this.lastActionTime,
       actionCooldown: this.actionCooldown,
       lastDecisionTime: this.lastDecisionTime,
-      
+
       memory: Object.fromEntries(this.memory),
       lastDamageTime: this.lastDamageTime,
       lastDamageSource: this.lastDamageSource,
       threatLevel: this.threatLevel,
-      
+
       lastUpdateTime: this.lastUpdateTime,
-      updatePriority: this.updatePriority
+      updatePriority: this.updatePriority,
     }
   }
 
@@ -547,37 +575,40 @@ export class EnemyAIComponent extends Component {
     this.previousState = data.previousState as AIBehaviorState
     this.stateEnterTime = data.stateEnterTime as number
     this.stateUpdateInterval = data.stateUpdateInterval as number
-    
+
     this.targetEntityId = data.targetEntityId as EntityId | null
-    this.lastKnownTargetPosition = data.lastKnownTargetPosition as Vector2 | null
+    this.lastKnownTargetPosition =
+      data.lastKnownTargetPosition as Vector2 | null
     this.detectionRange = data.detectionRange as number
     this.attackRange = data.attackRange as number
     this.loseTargetDistance = data.loseTargetDistance as number
-    
+
     this.movementPattern = data.movementPattern as MovementPattern
     this.moveSpeed = data.moveSpeed as number
     this.patrolPoints = data.patrolPoints as PatrolPoint[]
     this.currentPatrolIndex = data.currentPatrolIndex as number
     this.lastPatrolTime = data.lastPatrolTime as number
-    
+
     this.aggressionLevel = data.aggressionLevel as number
     this.fleeThreshold = data.fleeThreshold as number
     this.groupRadius = data.groupRadius as number
     this.reactionTime = data.reactionTime as number
-    
+
     this.actionQueue = data.actionQueue as AIAction[]
     this.lastActionTime = data.lastActionTime as number
     this.actionCooldown = data.actionCooldown as number
     this.lastDecisionTime = data.lastDecisionTime as number
-    
-    this.memory = new Map(Object.entries(data.memory as Record<string, unknown>))
+
+    this.memory = new Map(
+      Object.entries(data.memory as Record<string, unknown>)
+    )
     this.lastDamageTime = data.lastDamageTime as number
     this.lastDamageSource = data.lastDamageSource as EntityId | null
     this.threatLevel = data.threatLevel as number
-    
+
     this.lastUpdateTime = data.lastUpdateTime as number
     this.updatePriority = data.updatePriority as number
-    
+
     // Reinitialize state machine and behavior defaults
     this.initializeStateMachine()
   }

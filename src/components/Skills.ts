@@ -7,7 +7,7 @@ import type { EntityId } from '../types/CoreTypes'
 export enum SkillType {
   ACTIVE = 'active',
   PASSIVE = 'passive',
-  EVOLUTION = 'evolution'
+  EVOLUTION = 'evolution',
 }
 
 export enum SkillTargetType {
@@ -15,7 +15,7 @@ export enum SkillTargetType {
   ENEMIES = 'enemies',
   ALLIES = 'allies',
   AREA = 'area',
-  PROJECTILE = 'projectile'
+  PROJECTILE = 'projectile',
 }
 
 export enum SkillEffectType {
@@ -25,7 +25,7 @@ export enum SkillEffectType {
   DEBUFF = 'debuff',
   MOVEMENT = 'movement',
   PROJECTILE_CREATE = 'projectile_create',
-  ATTRIBUTE_MODIFY = 'attribute_modify'
+  ATTRIBUTE_MODIFY = 'attribute_modify',
 }
 
 /**
@@ -88,7 +88,7 @@ export interface ActiveEffect {
  */
 export class SkillsComponent extends Component {
   readonly type = 'skills'
-  
+
   public skills: Map<string, Skill> = new Map()
   public activeEffects: ActiveEffect[] = []
   public skillPoints: number = 0
@@ -107,7 +107,7 @@ export class SkillsComponent extends Component {
     if (this.skills.has(skill.id)) {
       return false
     }
-    
+
     this.skills.set(skill.id, { ...skill, lastUsed: 0 })
     return true
   }
@@ -137,12 +137,14 @@ export class SkillsComponent extends Component {
 
     skill.level++
     this.skillPoints--
-    
+
     // Scale effects with level
-    skill.effects.forEach(effect => {
-      if (effect.type === SkillEffectType.DAMAGE || 
-          effect.type === SkillEffectType.HEAL ||
-          effect.type === SkillEffectType.ATTRIBUTE_MODIFY) {
+    skill.effects.forEach((effect) => {
+      if (
+        effect.type === SkillEffectType.DAMAGE ||
+        effect.type === SkillEffectType.HEAL ||
+        effect.type === SkillEffectType.ATTRIBUTE_MODIFY
+      ) {
         effect.value *= 1.1 // 10% increase per level
       }
       if (effect.duration) {
@@ -186,8 +188,11 @@ export class SkillsComponent extends Component {
     if (!effect.effect.stackable) {
       // Remove existing effects of the same type from the same skill
       this.activeEffects = this.activeEffects.filter(
-        existing => !(existing.skillId === effect.skillId && 
-                     existing.effect.type === effect.effect.type)
+        (existing) =>
+          !(
+            existing.skillId === effect.skillId &&
+            existing.effect.type === effect.effect.type
+          )
       )
     }
 
@@ -198,7 +203,7 @@ export class SkillsComponent extends Component {
    * Removes expired effects
    */
   updateActiveEffects(currentTime: number): void {
-    this.activeEffects = this.activeEffects.filter(effect => {
+    this.activeEffects = this.activeEffects.filter((effect) => {
       return !effect.endTime || currentTime < effect.endTime
     })
   }
@@ -207,7 +212,7 @@ export class SkillsComponent extends Component {
    * Gets all active effects of a specific type
    */
   getActiveEffectsByType(type: SkillEffectType): ActiveEffect[] {
-    return this.activeEffects.filter(effect => effect.effect.type === type)
+    return this.activeEffects.filter((effect) => effect.effect.type === type)
   }
 
   /**
@@ -215,15 +220,17 @@ export class SkillsComponent extends Component {
    */
   getTotalEffectValue(type: SkillEffectType): number {
     return this.activeEffects
-      .filter(effect => effect.effect.type === type)
-      .reduce((total, effect) => total + (effect.effect.value * effect.stacks), 0)
+      .filter((effect) => effect.effect.type === type)
+      .reduce((total, effect) => total + effect.effect.value * effect.stacks, 0)
   }
 
   /**
    * Gets all skills of a specific type
    */
   getSkillsByType(type: SkillType): Skill[] {
-    return Array.from(this.skills.values()).filter(skill => skill.type === type)
+    return Array.from(this.skills.values()).filter(
+      (skill) => skill.type === type
+    )
   }
 
   /**
@@ -231,8 +238,8 @@ export class SkillsComponent extends Component {
    */
   getEvolutionOptions(): string[] {
     const options: string[] = []
-    
-    this.skills.forEach(skill => {
+
+    this.skills.forEach((skill) => {
       if (skill.evolveInto && skill.level >= skill.maxLevel) {
         options.push(...skill.evolveInto)
       }
@@ -244,17 +251,29 @@ export class SkillsComponent extends Component {
   /**
    * Checks if skill requirements are met
    */
-  meetsRequirements(requirements: SkillRequirement[], entityLevel: number, entityStats: Record<string, number>): boolean {
-    return requirements.every(req => {
+  meetsRequirements(
+    requirements: SkillRequirement[],
+    entityLevel: number,
+    entityStats: Record<string, number>
+  ): boolean {
+    return requirements.every((req) => {
       switch (req.type) {
         case 'level':
-          return this.compareValues(entityLevel, req.operator, req.value as number)
+          return this.compareValues(
+            entityLevel,
+            req.operator,
+            req.value as number
+          )
         case 'skill':
           const skill = this.skills.get(req.value as string)
           return skill && skill.level > 0
         case 'stat':
           const statValue = entityStats[req.value as string] ?? 0
-          return this.compareValues(statValue, req.operator, req.value as number)
+          return this.compareValues(
+            statValue,
+            req.operator,
+            req.value as number
+          )
         default:
           return true
       }
@@ -264,34 +283,44 @@ export class SkillsComponent extends Component {
   /**
    * Helper method for requirement comparison
    */
-  private compareValues(actual: number, operator: string, expected: number): boolean {
+  private compareValues(
+    actual: number,
+    operator: string,
+    expected: number
+  ): boolean {
     switch (operator) {
-      case '>': return actual > expected
-      case '>=': return actual >= expected
-      case '=': return actual === expected
-      case '<': return actual < expected
-      case '<=': return actual <= expected
-      default: return false
+      case '>':
+        return actual > expected
+      case '>=':
+        return actual >= expected
+      case '=':
+        return actual === expected
+      case '<':
+        return actual < expected
+      case '<=':
+        return actual <= expected
+      default:
+        return false
     }
   }
 
   clone(): SkillsComponent {
     const clone = new SkillsComponent(this.skillPoints)
-    
+
     // Deep clone skills
     this.skills.forEach((skill, id) => {
       clone.skills.set(id, {
         ...skill,
-        effects: skill.effects.map(effect => ({ ...effect })),
-        requirements: skill.requirements?.map(req => ({ ...req })),
-        evolveInto: skill.evolveInto ? [...skill.evolveInto] : undefined
+        effects: skill.effects.map((effect) => ({ ...effect })),
+        requirements: skill.requirements?.map((req) => ({ ...req })),
+        evolveInto: skill.evolveInto ? [...skill.evolveInto] : undefined,
       })
     })
 
     // Deep clone active effects
-    clone.activeEffects = this.activeEffects.map(effect => ({
+    clone.activeEffects = this.activeEffects.map((effect) => ({
       ...effect,
-      effect: { ...effect.effect }
+      effect: { ...effect.effect },
     }))
 
     clone.selectedSkills = [...this.selectedSkills]
@@ -306,7 +335,7 @@ export class SkillsComponent extends Component {
       skills: Object.fromEntries(this.skills),
       activeEffects: this.activeEffects,
       selectedSkills: this.selectedSkills,
-      evolutionProgress: Object.fromEntries(this.evolutionProgress)
+      evolutionProgress: Object.fromEntries(this.evolutionProgress),
     }
   }
 
@@ -315,6 +344,8 @@ export class SkillsComponent extends Component {
     this.skills = new Map(Object.entries(data.skills as Record<string, Skill>))
     this.activeEffects = data.activeEffects as ActiveEffect[]
     this.selectedSkills = data.selectedSkills as string[]
-    this.evolutionProgress = new Map(Object.entries(data.evolutionProgress as Record<string, number>))
+    this.evolutionProgress = new Map(
+      Object.entries(data.evolutionProgress as Record<string, number>)
+    )
   }
 }

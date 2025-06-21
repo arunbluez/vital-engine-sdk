@@ -1,9 +1,9 @@
 import { System } from '../core/ECS/System'
-import type { 
-  EntityQuery, 
-  SystemUpdateContext, 
+import type {
+  EntityQuery,
+  SystemUpdateContext,
   ComponentType,
-  EntityId
+  EntityId,
 } from '../types/CoreTypes'
 import type { TransformComponent } from '../components/Transform'
 import type { CombatComponent } from '../components/Combat'
@@ -70,20 +70,23 @@ export class CombatSystem extends System {
     }
   }
 
-  private findNearestTarget(attacker: CombatEntityQuery): TargetEntityQuery | null {
+  private findNearestTarget(
+    attacker: CombatEntityQuery
+  ): TargetEntityQuery | null {
     if (!this.world) {
       return null
     }
 
     // Get all entities with health components (potential targets)
-    const potentialTargets = this.world.getEntitiesWithComponents(['transform', 'health'])
+    const potentialTargets = this.world
+      .getEntitiesWithComponents(['transform', 'health'])
       .filter((entity: any) => entity.id !== attacker.id) // Don't target self
       .map((entity: any) => ({
         id: entity.id,
         components: {
           transform: entity.getComponent('transform'),
           health: entity.getComponent('health'),
-        }
+        },
       })) as TargetEntityQuery[]
 
     let nearestTarget: TargetEntityQuery | null = null
@@ -101,7 +104,10 @@ export class CombatSystem extends System {
       )
 
       // Check if target is in range
-      if (distance <= attacker.components.combat.weapon.range && distance < nearestDistance) {
+      if (
+        distance <= attacker.components.combat.weapon.range &&
+        distance < nearestDistance
+      ) {
         nearestDistance = distance
         nearestTarget = target
       }
@@ -110,8 +116,18 @@ export class CombatSystem extends System {
     return nearestTarget
   }
 
-  private attemptAttack(attacker: CombatEntityQuery, targetId: EntityId, currentTime: number): void {
+  private attemptAttack(
+    attacker: CombatEntityQuery,
+    targetId: EntityId,
+    currentTime: number
+  ): void {
     if (!this.world) {
+      return
+    }
+
+    // Prevent self-targeting
+    if (targetId === attacker.id) {
+      attacker.components.combat.setTarget(null)
       return
     }
 
@@ -122,7 +138,9 @@ export class CombatSystem extends System {
       return
     }
 
-    const targetTransform = targetEntity.getComponent('transform') as TransformComponent
+    const targetTransform = targetEntity.getComponent(
+      'transform'
+    ) as TransformComponent
     const targetHealth = targetEntity.getComponent('health') as HealthComponent
 
     if (!targetTransform || !targetHealth) {
@@ -154,8 +172,8 @@ export class CombatSystem extends System {
   }
 
   private performAttack(
-    attacker: CombatEntityQuery, 
-    targetEntity: any, 
+    attacker: CombatEntityQuery,
+    targetEntity: any,
     currentTime: number
   ): void {
     const combat = attacker.components.combat
@@ -203,7 +221,7 @@ export class CombatSystem extends System {
     }
 
     const currentTime = Date.now()
-    
+
     if (!attacker.components.combat.canAttack(currentTime)) {
       return false
     }
@@ -213,7 +231,9 @@ export class CombatSystem extends System {
       return false
     }
 
-    const targetTransform = targetEntity.getComponent('transform') as TransformComponent
+    const targetTransform = targetEntity.getComponent(
+      'transform'
+    ) as TransformComponent
     const targetHealth = targetEntity.getComponent('health') as HealthComponent
 
     if (!targetTransform || !targetHealth || targetHealth.isDead()) {
@@ -249,14 +269,15 @@ export class CombatSystem extends System {
       return []
     }
 
-    const potentialTargets = this.world.getEntitiesWithComponents(['transform', 'health'])
+    const potentialTargets = this.world
+      .getEntitiesWithComponents(['transform', 'health'])
       .filter((entity: any) => entity.id !== attacker.id)
       .map((entity: any) => ({
         id: entity.id,
         components: {
           transform: entity.getComponent('transform'),
           health: entity.getComponent('health'),
-        }
+        },
       })) as TargetEntityQuery[]
 
     return potentialTargets.filter((target) => {

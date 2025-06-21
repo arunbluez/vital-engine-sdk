@@ -26,14 +26,14 @@ export class BatchProcessor<T> {
     batchesProcessed: 0,
     averageBatchTime: 0,
     maxBatchTime: 0,
-    minBatchTime: Infinity
+    minBatchTime: Infinity,
   }
 
   constructor(config: Partial<BatchConfig> = {}) {
     this.config = {
       batchSize: config.batchSize ?? 100,
       maxBatchTime: config.maxBatchTime ?? 2, // 2ms default
-      enableParallelProcessing: config.enableParallelProcessing ?? false
+      enableParallelProcessing: config.enableParallelProcessing ?? false,
     }
   }
 
@@ -46,22 +46,28 @@ export class BatchProcessor<T> {
   ): Promise<R[]> {
     const results: R[] = []
     const startTime = performance.now()
-    
+
     this.metrics.totalItems = items.length
     this.metrics.batchesProcessed = 0
 
     for (let i = 0; i < items.length; i += this.config.batchSize) {
       const batchStart = performance.now()
-      const batch = items.slice(i, Math.min(i + this.config.batchSize, items.length))
-      
+      const batch = items.slice(
+        i,
+        Math.min(i + this.config.batchSize, items.length)
+      )
+
       const result = await processor(batch)
       results.push(result)
-      
+
       const batchTime = performance.now() - batchStart
       this.updateMetrics(batchTime)
-      
+
       // Yield to event loop if batch took too long
-      if (batchTime > this.config.maxBatchTime && i + this.config.batchSize < items.length) {
+      if (
+        batchTime > this.config.maxBatchTime &&
+        i + this.config.batchSize < items.length
+      ) {
         await this.yieldToEventLoop()
       }
     }
@@ -72,22 +78,22 @@ export class BatchProcessor<T> {
   /**
    * Processes items in batches synchronously
    */
-  processBatchesSync<R>(
-    items: T[],
-    processor: (batch: T[]) => R
-  ): R[] {
+  processBatchesSync<R>(items: T[], processor: (batch: T[]) => R): R[] {
     const results: R[] = []
-    
+
     this.metrics.totalItems = items.length
     this.metrics.batchesProcessed = 0
 
     for (let i = 0; i < items.length; i += this.config.batchSize) {
       const batchStart = performance.now()
-      const batch = items.slice(i, Math.min(i + this.config.batchSize, items.length))
-      
+      const batch = items.slice(
+        i,
+        Math.min(i + this.config.batchSize, items.length)
+      )
+
       const result = processor(batch)
       results.push(result)
-      
+
       const batchTime = performance.now() - batchStart
       this.updateMetrics(batchTime)
     }
@@ -113,38 +119,32 @@ export class BatchProcessor<T> {
   /**
    * Maps items in batches
    */
-  map<R>(
-    items: T[],
-    mapper: (item: T, index: number) => R
-  ): R[] {
+  map<R>(items: T[], mapper: (item: T, index: number) => R): R[] {
     const results: R[] = []
-    
+
     this.processBatchesSync(items, (batch) => {
       return batch.map((item, localIndex) => {
         const globalIndex = items.indexOf(item)
         return mapper(item, globalIndex)
       })
-    }).forEach(batchResults => results.push(...batchResults))
-    
+    }).forEach((batchResults) => results.push(...batchResults))
+
     return results
   }
 
   /**
    * Filters items in batches
    */
-  filter(
-    items: T[],
-    predicate: (item: T, index: number) => boolean
-  ): T[] {
+  filter(items: T[], predicate: (item: T, index: number) => boolean): T[] {
     const results: T[] = []
-    
+
     this.processBatchesSync(items, (batch) => {
       return batch.filter((item, localIndex) => {
         const globalIndex = items.indexOf(item)
         return predicate(item, globalIndex)
       })
-    }).forEach(batchResults => results.push(...batchResults))
-    
+    }).forEach((batchResults) => results.push(...batchResults))
+
     return results
   }
 
@@ -157,7 +157,7 @@ export class BatchProcessor<T> {
     initialValue: R
   ): R {
     let accumulator = initialValue
-    
+
     this.processBatchesSync(items, (batch) => {
       batch.forEach((item, localIndex) => {
         const globalIndex = items.indexOf(item)
@@ -165,7 +165,7 @@ export class BatchProcessor<T> {
       })
       return accumulator
     })
-    
+
     return accumulator
   }
 
@@ -175,10 +175,16 @@ export class BatchProcessor<T> {
   adjustBatchSize(targetTime: number = 2): void {
     if (this.metrics.averageBatchTime > targetTime) {
       // Decrease batch size
-      this.config.batchSize = Math.max(10, Math.floor(this.config.batchSize * 0.8))
+      this.config.batchSize = Math.max(
+        10,
+        Math.floor(this.config.batchSize * 0.8)
+      )
     } else if (this.metrics.averageBatchTime < targetTime * 0.5) {
       // Increase batch size
-      this.config.batchSize = Math.min(1000, Math.floor(this.config.batchSize * 1.2))
+      this.config.batchSize = Math.min(
+        1000,
+        Math.floor(this.config.batchSize * 1.2)
+      )
     }
   }
 
@@ -198,7 +204,7 @@ export class BatchProcessor<T> {
       batchesProcessed: 0,
       averageBatchTime: 0,
       maxBatchTime: 0,
-      minBatchTime: Infinity
+      minBatchTime: Infinity,
     }
   }
 
@@ -209,18 +215,19 @@ export class BatchProcessor<T> {
     this.metrics.batchesProcessed++
     this.metrics.maxBatchTime = Math.max(this.metrics.maxBatchTime, batchTime)
     this.metrics.minBatchTime = Math.min(this.metrics.minBatchTime, batchTime)
-    
+
     // Update rolling average
     const prevAvg = this.metrics.averageBatchTime
     const prevCount = this.metrics.batchesProcessed - 1
-    this.metrics.averageBatchTime = (prevAvg * prevCount + batchTime) / this.metrics.batchesProcessed
+    this.metrics.averageBatchTime =
+      (prevAvg * prevCount + batchTime) / this.metrics.batchesProcessed
   }
 
   /**
    * Yields control to the event loop
    */
   private yieldToEventLoop(): Promise<void> {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       if (typeof setImmediate !== 'undefined') {
         setImmediate(resolve)
       } else {
@@ -244,20 +251,20 @@ export class CacheFriendlyBatchProcessor<T> extends BatchProcessor<T> {
   ): Map<K, R> {
     // Group items by key for better cache locality
     const groups = new Map<K, T[]>()
-    
-    items.forEach(item => {
+
+    items.forEach((item) => {
       const key = keyExtractor(item)
       const group = groups.get(key) ?? []
       group.push(item)
       groups.set(key, group)
     })
-    
+
     // Process each group
     const results = new Map<K, R>()
     groups.forEach((group, key) => {
       results.set(key, processor(group))
     })
-    
+
     return results
   }
 }
@@ -268,5 +275,5 @@ export class CacheFriendlyBatchProcessor<T> extends BatchProcessor<T> {
 export const globalBatchProcessor = new BatchProcessor({
   batchSize: 100,
   maxBatchTime: 2,
-  enableParallelProcessing: false
+  enableParallelProcessing: false,
 })

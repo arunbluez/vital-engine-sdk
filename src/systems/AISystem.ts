@@ -1,23 +1,29 @@
 import { System } from '../core/ECS/System'
-import type { EntityQuery, SystemUpdateContext, ComponentType, EntityId } from '../types/CoreTypes'
-import { AIComponent, AIState, AIPersonality, type AIContext } from '../components/AI'
-import { TransformComponent } from '../components/Transform'
-import { MovementComponent } from '../components/Movement'
-import { HealthComponent } from '../components/Health'
-import { CombatComponent } from '../components/Combat'
+import type {
+  EntityQuery,
+  SystemUpdateContext,
+  ComponentType,
+  EntityId,
+} from '../types/CoreTypes'
+import type { AIComponent } from '../components/AI'
+import { AIState, AIPersonality, type AIContext } from '../components/AI'
+import type { TransformComponent } from '../components/Transform'
+import type { MovementComponent } from '../components/Movement'
+import type { HealthComponent } from '../components/Health'
+import type { CombatComponent } from '../components/Combat'
 import { Vector2Math, type Vector2 } from '../utils/Math'
-import { SpatialHashGrid } from '../utils/SpatialPartitioning'
+import type { SpatialHashGrid } from '../utils/SpatialPartitioning'
 import { GameEventType } from '../types/Events'
 
 /**
  * Pathfinding algorithm types
  */
 export enum PathfindingType {
-  FLOW_FIELD = 'flow_field',      // Best for many entities to same target
-  A_STAR = 'a_star',              // Best for individual paths
-  SIMPLE = 'simple',              // Direct line with obstacle avoidance
-  DIJKSTRA = 'dijkstra',          // Guaranteed shortest path
-  NAVIGATION_MESH = 'nav_mesh'    // Pre-computed navigation areas
+  FLOW_FIELD = 'flow_field', // Best for many entities to same target
+  A_STAR = 'a_star', // Best for individual paths
+  SIMPLE = 'simple', // Direct line with obstacle avoidance
+  DIJKSTRA = 'dijkstra', // Guaranteed shortest path
+  NAVIGATION_MESH = 'nav_mesh', // Pre-computed navigation areas
 }
 
 /**
@@ -25,9 +31,9 @@ export enum PathfindingType {
  */
 interface PathNode {
   position: Vector2
-  g: number  // Cost from start
-  h: number  // Heuristic cost to goal
-  f: number  // Total cost (g + h)
+  g: number // Cost from start
+  h: number // Heuristic cost to goal
+  f: number // Total cost (g + h)
   parent: PathNode | null
 }
 
@@ -83,7 +89,7 @@ export class AISystem extends System {
   private config: AISystemConfig
   private spatialGrid: SpatialHashGrid
   private eventSystem?: { emit: (eventType: string, data: unknown) => void }
-  private world?: { 
+  private world?: {
     getEntity: (id: EntityId) => unknown
     getEntitiesWithComponents: (components: string[]) => unknown[]
     getSystem?: (name: string) => any
@@ -93,7 +99,8 @@ export class AISystem extends System {
   private flowFields: Map<string, FlowFieldCell[][]> = new Map()
   private navigationMesh: NavMeshPolygon[] = []
   private pathCache: Map<string, Vector2[]> = new Map()
-  private pathfindingQueue: Array<{ entity: AIEntityQuery; target: Vector2 }> = []
+  private pathfindingQueue: Array<{ entity: AIEntityQuery; target: Vector2 }> =
+    []
   private pathfindingThisFrame: number = 0
 
   // Performance tracking
@@ -109,7 +116,7 @@ export class AISystem extends System {
     spatialGrid: SpatialHashGrid,
     config: Partial<AISystemConfig> = {},
     eventSystem?: { emit: (eventType: string, data: unknown) => void },
-    world?: { 
+    world?: {
       getEntity: (id: EntityId) => unknown
       getEntitiesWithComponents: (components: string[]) => unknown[]
       getSystem?: (name: string) => any
@@ -119,7 +126,7 @@ export class AISystem extends System {
     this.spatialGrid = spatialGrid
     this.eventSystem = eventSystem
     this.world = world
-    
+
     this.config = {
       pathfindingType: PathfindingType.FLOW_FIELD,
       maxPathfindingPerFrame: 10,
@@ -128,7 +135,7 @@ export class AISystem extends System {
       obstacleAvoidanceRadius: 30,
       groupBehaviorEnabled: true,
       debugPathfinding: false,
-      ...config
+      ...config,
     }
   }
 
@@ -147,7 +154,7 @@ export class AISystem extends System {
   update(context: SystemUpdateContext, entities: EntityQuery[]): void {
     const aiEntities = entities as AIEntityQuery[]
     const currentTime = context.totalTime
-    
+
     this.aiUpdatesThisFrame = 0
     this.pathfindingThisFrame = 0
 
@@ -158,7 +165,10 @@ export class AISystem extends System {
     this.processPathfindingQueue()
 
     // Update flow fields if needed
-    if (this.config.pathfindingType === PathfindingType.FLOW_FIELD && this.playerPosition) {
+    if (
+      this.config.pathfindingType === PathfindingType.FLOW_FIELD &&
+      this.playerPosition
+    ) {
       this.updateFlowField(this.playerPosition, 'player')
     }
 
@@ -167,7 +177,7 @@ export class AISystem extends System {
       if (this.aiUpdatesThisFrame >= this.maxAIUpdatesPerFrame) return
 
       const ai = entity.components.ai
-      
+
       // Check if should update based on priority
       if (!ai.shouldUpdate(currentTime)) return
 
@@ -187,7 +197,11 @@ export class AISystem extends System {
   /**
    * Updates a single AI entity
    */
-  private updateSingleAI(entity: AIEntityQuery, currentTime: number, context: SystemUpdateContext): void {
+  private updateSingleAI(
+    entity: AIEntityQuery,
+    currentTime: number,
+    context: SystemUpdateContext
+  ): void {
     const ai = entity.components.ai
     const transform = entity.components.transform
     const movement = entity.components.movement
@@ -203,7 +217,7 @@ export class AISystem extends System {
         entityId: entity.id,
         previousState: ai.previousState,
         newState: ai.currentState,
-        timestamp: currentTime
+        timestamp: currentTime,
       })
     }
 
@@ -232,7 +246,10 @@ export class AISystem extends System {
   /**
    * Builds AI context for decision making
    */
-  private buildAIContext(entity: AIEntityQuery, currentTime: number): AIContext {
+  private buildAIContext(
+    entity: AIEntityQuery,
+    currentTime: number
+  ): AIContext {
     const ai = entity.components.ai
     const transform = entity.components.transform
     const health = (entity as any).getComponent?.('health') as HealthComponent
@@ -240,12 +257,12 @@ export class AISystem extends System {
     // Get nearby entities
     const nearbyEntityIds = this.spatialGrid.query({
       position: transform.position,
-      radius: Math.max(ai.sightRange, ai.hearingRange)
+      radius: Math.max(ai.sightRange, ai.hearingRange),
     })
-    
-    const nearbyEntities = nearbyEntityIds.map(id => 
-      this.world?.getEntity(id)
-    ).filter(e => e != null)
+
+    const nearbyEntities = nearbyEntityIds
+      .map((id) => this.world?.getEntity(id))
+      .filter((e) => e != null)
 
     let nearbyAllies = 0
     let nearbyEnemies = 0
@@ -261,9 +278,18 @@ export class AISystem extends System {
       if (isEnemy) {
         nearbyEnemies++
         if (nearbyEntity.id === ai.targetId) {
-          const targetTransform = nearbyEntity.getComponent('transform') as TransformComponent
-          distanceToTarget = Vector2Math.distance(transform.position, targetTransform.position)
-          targetVisible = this.checkLineOfSight(transform.position, targetTransform.position, ai.sightRange)
+          const targetTransform = nearbyEntity.getComponent(
+            'transform'
+          ) as TransformComponent
+          distanceToTarget = Vector2Math.distance(
+            transform.position,
+            targetTransform.position
+          )
+          targetVisible = this.checkLineOfSight(
+            transform.position,
+            targetTransform.position,
+            ai.sightRange
+          )
         }
       } else {
         nearbyAllies++
@@ -284,14 +310,18 @@ export class AISystem extends System {
       timeSinceLastAttack: currentTime - ai.lastAttackTime,
       currentStateTime: currentTime - ai.stateStartTime,
       hasPath: ai.currentPath.length > 0,
-      isStuck
+      isStuck,
     }
   }
 
   /**
    * Processes the current AI state
    */
-  private processAIState(entity: AIEntityQuery, context: AIContext, currentTime: number): void {
+  private processAIState(
+    entity: AIEntityQuery,
+    context: AIContext,
+    currentTime: number
+  ): void {
     const ai = entity.components.ai
 
     switch (ai.currentState) {
@@ -336,7 +366,11 @@ export class AISystem extends System {
   /**
    * Process idle state
    */
-  private processIdleState(entity: AIEntityQuery, context: AIContext, currentTime: number): void {
+  private processIdleState(
+    entity: AIEntityQuery,
+    context: AIContext,
+    currentTime: number
+  ): void {
     const ai = entity.components.ai
     const movement = entity.components.movement
 
@@ -352,7 +386,11 @@ export class AISystem extends System {
   /**
    * Process patrol state
    */
-  private processPatrolState(entity: AIEntityQuery, context: AIContext, currentTime: number): void {
+  private processPatrolState(
+    entity: AIEntityQuery,
+    context: AIContext,
+    currentTime: number
+  ): void {
     const ai = entity.components.ai
     const transform = entity.components.transform
 
@@ -374,7 +412,11 @@ export class AISystem extends System {
   /**
    * Process chase state
    */
-  private processChaseState(entity: AIEntityQuery, context: AIContext, currentTime: number): void {
+  private processChaseState(
+    entity: AIEntityQuery,
+    context: AIContext,
+    currentTime: number
+  ): void {
     const ai = entity.components.ai
 
     if (!ai.targetPosition) return
@@ -385,7 +427,10 @@ export class AISystem extends System {
     }
 
     // If lost sight of target, go to last known position
-    if (!context.targetVisible && ai.memory.lastSeenPositions.has(ai.targetId!)) {
+    if (
+      !context.targetVisible &&
+      ai.memory.lastSeenPositions.has(ai.targetId!)
+    ) {
       const lastPos = ai.memory.lastSeenPositions.get(ai.targetId!)!
       this.requestPathfinding(entity, lastPos)
     }
@@ -394,16 +439,25 @@ export class AISystem extends System {
   /**
    * Process attack state
    */
-  private processAttackState(entity: AIEntityQuery, context: AIContext, currentTime: number): void {
+  private processAttackState(
+    entity: AIEntityQuery,
+    context: AIContext,
+    currentTime: number
+  ): void {
     const ai = entity.components.ai
     const combat = (entity as any).getComponent?.('combat') as CombatComponent
 
-    if (!combat || !ai.targetId || currentTime - ai.lastAttackTime < ai.attackCooldown) return
+    if (
+      !combat ||
+      !ai.targetId ||
+      currentTime - ai.lastAttackTime < ai.attackCooldown
+    )
+      return
 
     // Perform attack
     if (this.world) {
       const combatSystem = this.world.getSystem?.('combat')
-      if (combatSystem && combatSystem.triggerAttack) {
+      if (combatSystem?.triggerAttack) {
         combatSystem.triggerAttack(entity, ai.targetId)
         ai.lastAttackTime = currentTime
       }
@@ -413,7 +467,11 @@ export class AISystem extends System {
   /**
    * Process flee state
    */
-  private processFleeState(entity: AIEntityQuery, context: AIContext, currentTime: number): void {
+  private processFleeState(
+    entity: AIEntityQuery,
+    context: AIContext,
+    currentTime: number
+  ): void {
     const ai = entity.components.ai
     const transform = entity.components.transform
 
@@ -426,7 +484,7 @@ export class AISystem extends System {
 
     const fleeTarget = {
       x: transform.position.x + fleeDirection.x * ai.fleeDistance,
-      y: transform.position.y + fleeDirection.y * ai.fleeDistance
+      y: transform.position.y + fleeDirection.y * ai.fleeDistance,
     }
 
     // Request path away from threat
@@ -436,7 +494,11 @@ export class AISystem extends System {
   /**
    * Process investigate state
    */
-  private processInvestigateState(entity: AIEntityQuery, context: AIContext, currentTime: number): void {
+  private processInvestigateState(
+    entity: AIEntityQuery,
+    context: AIContext,
+    currentTime: number
+  ): void {
     const ai = entity.components.ai
 
     // Move to last known position of target
@@ -449,7 +511,11 @@ export class AISystem extends System {
   /**
    * Process retreat state
    */
-  private processRetreatState(entity: AIEntityQuery, context: AIContext, currentTime: number): void {
+  private processRetreatState(
+    entity: AIEntityQuery,
+    context: AIContext,
+    currentTime: number
+  ): void {
     const ai = entity.components.ai
     const transform = entity.components.transform
 
@@ -461,7 +527,7 @@ export class AISystem extends System {
 
       const retreatTarget = {
         x: ai.targetPosition.x + retreatDirection.x * ai.preferredDistance,
-        y: ai.targetPosition.y + retreatDirection.y * ai.preferredDistance
+        y: ai.targetPosition.y + retreatDirection.y * ai.preferredDistance,
       }
 
       this.requestPathfinding(entity, retreatTarget)
@@ -471,18 +537,22 @@ export class AISystem extends System {
   /**
    * Process support state
    */
-  private processSupportState(entity: AIEntityQuery, context: AIContext, currentTime: number): void {
+  private processSupportState(
+    entity: AIEntityQuery,
+    context: AIContext,
+    currentTime: number
+  ): void {
     const ai = entity.components.ai
 
     // Find nearest ally that needs help
     const nearbyEntityIds = this.spatialGrid.query({
       position: entity.components.transform.position,
-      radius: ai.sightRange
+      radius: ai.sightRange,
     })
-    
-    const nearbyEntities = nearbyEntityIds.map(id => 
-      this.world?.getEntity(id)
-    ).filter(e => e != null)
+
+    const nearbyEntities = nearbyEntityIds
+      .map((id) => this.world?.getEntity(id))
+      .filter((e) => e != null)
 
     let lowestHealthAlly: EntityQuery | null = null
     let lowestHealth = 1.0
@@ -502,7 +572,9 @@ export class AISystem extends System {
     })
 
     if (lowestHealthAlly && lowestHealth < 0.5) {
-      const allyTransform = (lowestHealthAlly as any).getComponent('transform') as TransformComponent
+      const allyTransform = (lowestHealthAlly as any).getComponent(
+        'transform'
+      ) as TransformComponent
       this.requestPathfinding(entity, allyTransform.position)
     }
   }
@@ -510,13 +582,20 @@ export class AISystem extends System {
   /**
    * Process guard state
    */
-  private processGuardState(entity: AIEntityQuery, context: AIContext, currentTime: number): void {
+  private processGuardState(
+    entity: AIEntityQuery,
+    context: AIContext,
+    currentTime: number
+  ): void {
     const ai = entity.components.ai
     const transform = entity.components.transform
 
     if (!ai.guardPosition) return
 
-    const distanceToGuardPos = Vector2Math.distance(transform.position, ai.guardPosition)
+    const distanceToGuardPos = Vector2Math.distance(
+      transform.position,
+      ai.guardPosition
+    )
 
     // Return to guard position if too far
     if (distanceToGuardPos > ai.sightRange / 2) {
@@ -531,7 +610,10 @@ export class AISystem extends System {
   /**
    * Checks if should update path
    */
-  private shouldUpdatePath(entity: AIEntityQuery, currentTime: number): boolean {
+  private shouldUpdatePath(
+    entity: AIEntityQuery,
+    currentTime: number
+  ): boolean {
     const ai = entity.components.ai
 
     // Don't update if recently calculated
@@ -546,7 +628,8 @@ export class AISystem extends System {
     // Update if target moved significantly
     if (ai.targetPosition && ai.currentPath.length > 0) {
       const pathTarget = ai.currentPath[ai.currentPath.length - 1]
-      const targetMoved = Vector2Math.distance(pathTarget, ai.targetPosition) > 50
+      const targetMoved =
+        Vector2Math.distance(pathTarget, ai.targetPosition) > 50
       if (targetMoved) return true
     }
 
@@ -556,7 +639,10 @@ export class AISystem extends System {
   /**
    * Requests pathfinding for an entity
    */
-  private requestPathfinding(entity: AIEntityQuery, target: Vector2 | null): void {
+  private requestPathfinding(
+    entity: AIEntityQuery,
+    target: Vector2 | null
+  ): void {
     if (!target) return
 
     // Add to pathfinding queue
@@ -567,7 +653,10 @@ export class AISystem extends System {
    * Processes pathfinding queue
    */
   private processPathfindingQueue(): void {
-    while (this.pathfindingQueue.length > 0 && this.pathfindingThisFrame < this.config.maxPathfindingPerFrame) {
+    while (
+      this.pathfindingQueue.length > 0 &&
+      this.pathfindingThisFrame < this.config.maxPathfindingPerFrame
+    ) {
       const request = this.pathfindingQueue.shift()!
       this.calculatePath(request.entity, request.target)
       this.pathfindingThisFrame++
@@ -635,7 +724,7 @@ export class AISystem extends System {
       const t = i / steps
       path.push({
         x: start.x + (end.x - start.x) * t,
-        y: start.y + (end.y - start.y) * t
+        y: start.y + (end.y - start.y) * t,
       })
     }
 
@@ -655,7 +744,7 @@ export class AISystem extends System {
       g: 0,
       h: Vector2Math.distance(start, end),
       f: 0,
-      parent: null
+      parent: null,
     }
     startNode.f = startNode.g + startNode.h
 
@@ -680,20 +769,24 @@ export class AISystem extends System {
         const neighborKey = `${Math.floor(neighborPos.x / gridSize)},${Math.floor(neighborPos.y / gridSize)}`
         if (closedSet.has(neighborKey)) continue
 
-        const g = current.g + Vector2Math.distance(current.position, neighborPos)
+        const g =
+          current.g + Vector2Math.distance(current.position, neighborPos)
         const h = Vector2Math.distance(neighborPos, end)
         const f = g + h
 
-        const existingNode = openSet.find(n => 
-          Math.abs(n.position.x - neighborPos.x) < gridSize &&
-          Math.abs(n.position.y - neighborPos.y) < gridSize
+        const existingNode = openSet.find(
+          (n) =>
+            Math.abs(n.position.x - neighborPos.x) < gridSize &&
+            Math.abs(n.position.y - neighborPos.y) < gridSize
         )
 
         if (!existingNode) {
           openSet.push({
             position: neighborPos,
-            g, h, f,
-            parent: current
+            g,
+            h,
+            f,
+            parent: current,
           })
         } else if (g < existingNode.g) {
           existingNode.g = g
@@ -728,13 +821,18 @@ export class AISystem extends System {
       const gridX = Math.floor(current.x / stepSize)
       const gridY = Math.floor(current.y / stepSize)
 
-      if (gridY >= 0 && gridY < flowField.length && gridX >= 0 && gridX < flowField[0].length) {
+      if (
+        gridY >= 0 &&
+        gridY < flowField.length &&
+        gridX >= 0 &&
+        gridX < flowField[0].length
+      ) {
         const cell = flowField[gridY][gridX]
         if (cell.cost === Infinity) break
 
         current = {
           x: current.x + cell.direction.x * stepSize,
-          y: current.y + cell.direction.y * stepSize
+          y: current.y + cell.direction.y * stepSize,
         }
         path.push({ ...current })
 
@@ -791,7 +889,7 @@ export class AISystem extends System {
         grid[y][x] = {
           direction: { x: 0, y: 0 },
           cost: Infinity,
-          bestCost: Infinity
+          bestCost: Infinity,
         }
       }
     }
@@ -799,7 +897,12 @@ export class AISystem extends System {
     // Set target cell cost to 0
     const targetX = Math.floor(target.x / resolution)
     const targetY = Math.floor(target.y / resolution)
-    if (targetY >= 0 && targetY < gridHeight && targetX >= 0 && targetX < gridWidth) {
+    if (
+      targetY >= 0 &&
+      targetY < gridHeight &&
+      targetX >= 0 &&
+      targetX < gridWidth
+    ) {
       grid[targetY][targetX].cost = 0
       grid[targetY][targetX].bestCost = 0
     }
@@ -807,8 +910,14 @@ export class AISystem extends System {
     // Calculate costs (wave propagation)
     const queue: Vector2[] = [{ x: targetX, y: targetY }]
     const directions = [
-      { x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 },
-      { x: -1, y: -1 }, { x: 1, y: -1 }, { x: 1, y: 1 }, { x: -1, y: 1 }
+      { x: 0, y: -1 },
+      { x: 1, y: 0 },
+      { x: 0, y: 1 },
+      { x: -1, y: 0 },
+      { x: -1, y: -1 },
+      { x: 1, y: -1 },
+      { x: 1, y: 1 },
+      { x: -1, y: 1 },
     ]
 
     while (queue.length > 0) {
@@ -819,9 +928,15 @@ export class AISystem extends System {
         const nextX = current.x + dir.x
         const nextY = current.y + dir.y
 
-        if (nextY >= 0 && nextY < gridHeight && nextX >= 0 && nextX < gridWidth) {
-          const newCost = currentCost + (Math.abs(dir.x) + Math.abs(dir.y) > 1 ? 1.414 : 1)
-          
+        if (
+          nextY >= 0 &&
+          nextY < gridHeight &&
+          nextX >= 0 &&
+          nextX < gridWidth
+        ) {
+          const newCost =
+            currentCost + (Math.abs(dir.x) + Math.abs(dir.y) > 1 ? 1.414 : 1)
+
           if (newCost < grid[nextY][nextX].bestCost) {
             grid[nextY][nextX].bestCost = newCost
             queue.push({ x: nextX, y: nextY })
@@ -842,7 +957,12 @@ export class AISystem extends System {
           const nextX = x + dir.x
           const nextY = y + dir.y
 
-          if (nextY >= 0 && nextY < gridHeight && nextX >= 0 && nextX < gridWidth) {
+          if (
+            nextY >= 0 &&
+            nextY < gridHeight &&
+            nextX >= 0 &&
+            nextX < gridWidth
+          ) {
             if (grid[nextY][nextX].bestCost < bestCost) {
               bestCost = grid[nextY][nextX].bestCost
               bestDir = dir
@@ -863,16 +983,20 @@ export class AISystem extends System {
   private getNeighbors(position: Vector2, gridSize: number): Vector2[] {
     const neighbors: Vector2[] = []
     const directions = [
-      { x: 0, y: -gridSize }, { x: gridSize, y: 0 },
-      { x: 0, y: gridSize }, { x: -gridSize, y: 0 },
-      { x: -gridSize, y: -gridSize }, { x: gridSize, y: -gridSize },
-      { x: gridSize, y: gridSize }, { x: -gridSize, y: gridSize }
+      { x: 0, y: -gridSize },
+      { x: gridSize, y: 0 },
+      { x: 0, y: gridSize },
+      { x: -gridSize, y: 0 },
+      { x: -gridSize, y: -gridSize },
+      { x: gridSize, y: -gridSize },
+      { x: gridSize, y: gridSize },
+      { x: -gridSize, y: gridSize },
     ]
 
     for (const dir of directions) {
       const neighborPos = {
         x: position.x + dir.x,
-        y: position.y + dir.y
+        y: position.y + dir.y,
       }
 
       // Check if position is valid (would check obstacles here)
@@ -900,7 +1024,10 @@ export class AISystem extends System {
   /**
    * Applies movement from pathfinding
    */
-  private applyPathfindingMovement(entity: AIEntityQuery, currentTime: number): void {
+  private applyPathfindingMovement(
+    entity: AIEntityQuery,
+    currentTime: number
+  ): void {
     const ai = entity.components.ai
     const transform = entity.components.transform
     const movement = entity.components.movement
@@ -933,7 +1060,10 @@ export class AISystem extends System {
   /**
    * Applies obstacle avoidance
    */
-  private applyObstacleAvoidance(entity: AIEntityQuery, desiredDirection: Vector2): void {
+  private applyObstacleAvoidance(
+    entity: AIEntityQuery,
+    desiredDirection: Vector2
+  ): void {
     const transform = entity.components.transform
     const movement = entity.components.movement
     const ai = entity.components.ai
@@ -941,26 +1071,31 @@ export class AISystem extends System {
     // Get nearby entities for avoidance
     const nearbyEntityIds = this.spatialGrid.query({
       position: transform.position,
-      radius: ai.avoidanceRadius
+      radius: ai.avoidanceRadius,
     })
-    
-    const nearbyEntities = nearbyEntityIds.map(id => 
-      this.world?.getEntity(id)
-    ).filter(e => e != null)
+
+    const nearbyEntities = nearbyEntityIds
+      .map((id) => this.world?.getEntity(id))
+      .filter((e) => e != null)
 
     let avoidanceForce = { x: 0, y: 0 }
 
     nearbyEntities.forEach((other: any) => {
       if (other.id === entity.id) return
 
-      const otherTransform = other.getComponent('transform') as TransformComponent
-      const distance = Vector2Math.distance(transform.position, otherTransform.position)
+      const otherTransform = other.getComponent(
+        'transform'
+      ) as TransformComponent
+      const distance = Vector2Math.distance(
+        transform.position,
+        otherTransform.position
+      )
 
       if (distance < ai.avoidanceRadius && distance > 0) {
         const avoidDir = Vector2Math.normalize(
           Vector2Math.subtract(transform.position, otherTransform.position)
         )
-        const strength = 1 - (distance / ai.avoidanceRadius)
+        const strength = 1 - distance / ai.avoidanceRadius
         avoidanceForce.x += avoidDir.x * strength
         avoidanceForce.y += avoidDir.y * strength
       }
@@ -971,7 +1106,7 @@ export class AISystem extends System {
       avoidanceForce = Vector2Math.normalize(avoidanceForce)
       const combinedDir = Vector2Math.normalize({
         x: desiredDirection.x * 0.7 + avoidanceForce.x * 0.3,
-        y: desiredDirection.y * 0.7 + avoidanceForce.y * 0.3
+        y: desiredDirection.y * 0.7 + avoidanceForce.y * 0.3,
       })
 
       const speed = movement.maxSpeed * ai.moveSpeed
@@ -982,7 +1117,10 @@ export class AISystem extends System {
   /**
    * Applies group behaviors (flocking, formations)
    */
-  private applyGroupBehaviors(entity: AIEntityQuery, currentTime: number): void {
+  private applyGroupBehaviors(
+    entity: AIEntityQuery,
+    currentTime: number
+  ): void {
     const ai = entity.components.ai
     const transform = entity.components.transform
     const movement = entity.components.movement
@@ -991,23 +1129,26 @@ export class AISystem extends System {
 
     const nearbyAllyIds = this.spatialGrid.query({
       position: transform.position,
-      radius: 100
+      radius: 100,
     })
-    
-    const nearbyAllies = nearbyAllyIds.map(id => 
-      this.world?.getEntity(id)
-    ).filter((e: any) => e && e.hasComponent('ai') && e.id !== entity.id)
+
+    const nearbyAllies = nearbyAllyIds
+      .map((id) => this.world?.getEntity(id))
+      .filter((e: any) => e?.hasComponent('ai') && e.id !== entity.id)
 
     if (nearbyAllies.length === 0) return
 
-    let separation = { x: 0, y: 0 }
+    const separation = { x: 0, y: 0 }
     let alignment = { x: 0, y: 0 }
     let cohesion = { x: 0, y: 0 }
 
     nearbyAllies.forEach((ally: any) => {
       const allyTransform = ally.getComponent('transform') as TransformComponent
       const allyMovement = ally.getComponent('movement') as MovementComponent
-      const distance = Vector2Math.distance(transform.position, allyTransform.position)
+      const distance = Vector2Math.distance(
+        transform.position,
+        allyTransform.position
+      )
 
       // Separation
       if (distance < 30) {
@@ -1031,12 +1172,12 @@ export class AISystem extends System {
     if (nearbyAllies.length > 0) {
       alignment = Vector2Math.normalize({
         x: alignment.x / nearbyAllies.length,
-        y: alignment.y / nearbyAllies.length
+        y: alignment.y / nearbyAllies.length,
       })
 
       cohesion = {
         x: cohesion.x / nearbyAllies.length - transform.position.x,
-        y: cohesion.y / nearbyAllies.length - transform.position.y
+        y: cohesion.y / nearbyAllies.length - transform.position.y,
       }
       cohesion = Vector2Math.normalize(cohesion)
     }
@@ -1044,14 +1185,14 @@ export class AISystem extends System {
     // Combine behaviors
     const flockingForce = {
       x: separation.x * 0.5 + alignment.x * 0.3 + cohesion.x * 0.2,
-      y: separation.y * 0.5 + alignment.y * 0.3 + cohesion.y * 0.2
+      y: separation.y * 0.5 + alignment.y * 0.3 + cohesion.y * 0.2,
     }
 
     if (flockingForce.x !== 0 || flockingForce.y !== 0) {
       const currentVel = movement.velocity
       const newVel = {
         x: currentVel.x * 0.8 + flockingForce.x * movement.maxSpeed * 0.2,
-        y: currentVel.y * 0.8 + flockingForce.y * movement.maxSpeed * 0.2
+        y: currentVel.y * 0.8 + flockingForce.y * movement.maxSpeed * 0.2,
       }
       movement.setVelocity(newVel.x, newVel.y)
     }
@@ -1060,7 +1201,11 @@ export class AISystem extends System {
   /**
    * Checks line of sight between two points
    */
-  private checkLineOfSight(from: Vector2, to: Vector2, maxRange: number): boolean {
+  private checkLineOfSight(
+    from: Vector2,
+    to: Vector2,
+    maxRange: number
+  ): boolean {
     const distance = Vector2Math.distance(from, to)
     if (distance > maxRange) return false
 
@@ -1074,7 +1219,10 @@ export class AISystem extends System {
   private updatePlayerReference(): void {
     if (!this.world) return
 
-    const entities = this.world.getEntitiesWithComponents(['transform', 'health'])
+    const entities = this.world.getEntitiesWithComponents([
+      'transform',
+      'health',
+    ])
     const player = entities.find((e: any) => !e.hasComponent('ai')) as any
 
     if (player) {
@@ -1120,7 +1268,7 @@ export class AISystem extends System {
           keysToDelete.push(key)
         }
       })
-      keysToDelete.forEach(key => this.pathCache.delete(key))
+      keysToDelete.forEach((key) => this.pathCache.delete(key))
     }
 
     // Clear old flow fields
@@ -1132,7 +1280,7 @@ export class AISystem extends System {
           keysToDelete.push(key)
         }
       })
-      keysToDelete.forEach(key => this.flowFields.delete(key))
+      keysToDelete.forEach((key) => this.flowFields.delete(key))
     }
   }
 
@@ -1146,7 +1294,7 @@ export class AISystem extends System {
       pathCacheSize: this.pathCache.size,
       flowFieldCount: this.flowFields.size,
       pathfindingQueueLength: this.pathfindingQueue.length,
-      pathfindingType: this.config.pathfindingType
+      pathfindingType: this.config.pathfindingType,
     }
   }
 }

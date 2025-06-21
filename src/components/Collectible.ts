@@ -16,7 +16,7 @@ export enum CollectibleType {
   UPGRADE_MATERIAL = 'upgrade_material',
   WEAPON = 'weapon',
   ARMOR = 'armor',
-  CONSUMABLE = 'consumable'
+  CONSUMABLE = 'consumable',
 }
 
 /**
@@ -27,18 +27,18 @@ export enum CollectibleRarity {
   UNCOMMON = 'uncommon',
   RARE = 'rare',
   EPIC = 'epic',
-  LEGENDARY = 'legendary'
+  LEGENDARY = 'legendary',
 }
 
 /**
  * Collection behavior types
  */
 export enum CollectionBehavior {
-  IMMEDIATE = 'immediate',      // Collected instantly on contact
-  MAGNETIC = 'magnetic',        // Attracted to player when in range
-  MANUAL = 'manual',           // Requires player action to collect
-  AUTOMATIC = 'automatic',     // Automatically collected after delay
-  PROXIMITY = 'proximity'      // Collected when player is nearby
+  IMMEDIATE = 'immediate', // Collected instantly on contact
+  MAGNETIC = 'magnetic', // Attracted to player when in range
+  MANUAL = 'manual', // Requires player action to collect
+  AUTOMATIC = 'automatic', // Automatically collected after delay
+  PROXIMITY = 'proximity', // Collected when player is nearby
 }
 
 /**
@@ -51,7 +51,7 @@ export enum CollectibleEffect {
   SPARKLE = 'sparkle',
   FLOAT = 'float',
   SPIN = 'spin',
-  BOUNCE = 'bounce'
+  BOUNCE = 'bounce',
 }
 
 /**
@@ -72,11 +72,11 @@ export interface CollectionEvent {
  */
 export interface MagnetismConfig {
   enabled: boolean
-  range: number               // Attraction range
-  strength: number           // Attraction force
-  maxSpeed: number          // Maximum attraction speed
-  acceleration: number      // Attraction acceleration
-  decayRate: number        // Force decay over distance
+  range: number // Attraction range
+  strength: number // Attraction force
+  maxSpeed: number // Maximum attraction speed
+  acceleration: number // Attraction acceleration
+  decayRate: number // Force decay over distance
 }
 
 /**
@@ -113,7 +113,7 @@ export class CollectibleComponent extends Component {
     strength: 150,
     maxSpeed: 200,
     acceleration: 300,
-    decayRate: 0.5
+    decayRate: 0.5,
   }
 
   // Lifetime and despawn
@@ -149,8 +149,8 @@ export class CollectibleComponent extends Component {
   public updateInterval: number = 100 // Update every 100ms
 
   constructor(
-    collectibleType: CollectibleType, 
-    value: number = 1, 
+    collectibleType: CollectibleType,
+    value: number = 1,
     rarity: CollectibleRarity = CollectibleRarity.COMMON
   ) {
     super()
@@ -235,9 +235,16 @@ export class CollectibleComponent extends Component {
   /**
    * Checks if the collectible can be collected by an entity
    */
-  canBeCollected(collectorId: EntityId, collectorLevel?: number, collectorItems?: string[]): boolean {
+  canBeCollected(
+    collectorId: EntityId,
+    collectorLevel?: number,
+    collectorItems?: string[]
+  ): boolean {
     // Check if specific entities can collect
-    if (this.canBeCollectedBy.length > 0 && !this.canBeCollectedBy.includes(collectorId)) {
+    if (
+      this.canBeCollectedBy.length > 0 &&
+      !this.canBeCollectedBy.includes(collectorId)
+    ) {
       return false
     }
 
@@ -252,11 +259,18 @@ export class CollectibleComponent extends Component {
   /**
    * Checks if collection requirements are met
    */
-  private meetsRequirements(collectorLevel: number, collectorItems?: string[]): boolean {
-    return this.requirements.every(req => {
+  private meetsRequirements(
+    collectorLevel: number,
+    collectorItems?: string[]
+  ): boolean {
+    return this.requirements.every((req) => {
       switch (req.type) {
         case 'level':
-          return this.compareValues(collectorLevel, req.operator, req.value as number)
+          return this.compareValues(
+            collectorLevel,
+            req.operator,
+            req.value as number
+          )
         case 'item':
           return collectorItems?.includes(req.value as string) ?? false
         default:
@@ -268,14 +282,24 @@ export class CollectibleComponent extends Component {
   /**
    * Helper method for requirement comparison
    */
-  private compareValues(actual: number, operator: string, expected: number): boolean {
+  private compareValues(
+    actual: number,
+    operator: string,
+    expected: number
+  ): boolean {
     switch (operator) {
-      case '>': return actual > expected
-      case '>=': return actual >= expected
-      case '=': return actual === expected
-      case '<': return actual < expected
-      case '<=': return actual <= expected
-      default: return false
+      case '>':
+        return actual > expected
+      case '>=':
+        return actual >= expected
+      case '=':
+        return actual === expected
+      case '<':
+        return actual < expected
+      case '<=':
+        return actual <= expected
+      default:
+        return false
     }
   }
 
@@ -302,8 +326,8 @@ export class CollectibleComponent extends Component {
    * Calculates magnetic force toward target
    */
   calculateMagneticForce(
-    currentPosition: Vector2, 
-    targetPosition: Vector2, 
+    currentPosition: Vector2,
+    targetPosition: Vector2,
     _currentTime: number
   ): Vector2 {
     if (!this.magnetismConfig.enabled || !this.isBeingAttracted) {
@@ -318,15 +342,18 @@ export class CollectibleComponent extends Component {
     }
 
     // Calculate force based on distance (closer = stronger)
-    const distanceRatio = 1 - (distance / this.magnetismConfig.range)
-    const forceMultiplier = Math.pow(distanceRatio, this.magnetismConfig.decayRate)
-    
+    const distanceRatio = 1 - distance / this.magnetismConfig.range
+    const forceMultiplier = Math.pow(
+      distanceRatio,
+      this.magnetismConfig.decayRate
+    )
+
     const normalizedDirection = Vector2Math.normalize(direction)
     const force = this.magnetismConfig.strength * forceMultiplier
 
     return {
       x: normalizedDirection.x * force,
-      y: normalizedDirection.y * force
+      y: normalizedDirection.y * force,
     }
   }
 
@@ -367,7 +394,7 @@ export class CollectibleComponent extends Component {
     if (this.collectionBehavior !== CollectionBehavior.AUTOMATIC) {
       return 0
     }
-    
+
     const elapsed = currentTime - this.spawnTime
     return Math.min(1, elapsed / this.autoCollectDelay)
   }
@@ -394,12 +421,13 @@ export class CollectibleComponent extends Component {
   updateVisualEffect(currentTime: number): void {
     // This would typically be handled by a rendering system
     // Here we just update internal animation state if needed
-    
+
     switch (this.visualEffect) {
       case CollectibleEffect.PULSE:
         // Pulse effect could modify effectIntensity
         const pulseSpeed = 2.0
-        this.effectIntensity = 1.0 + 0.3 * Math.sin(currentTime * pulseSpeed * 0.001)
+        this.effectIntensity =
+          1.0 + 0.3 * Math.sin(currentTime * pulseSpeed * 0.001)
         break
 
       case CollectibleEffect.FLOAT:
@@ -412,7 +440,8 @@ export class CollectibleComponent extends Component {
       case CollectibleEffect.SPIN:
         // Spin effect could modify rotation
         const spinSpeed = 3.0
-        this.metadata.rotation = (currentTime * spinSpeed * 0.001) % (Math.PI * 2)
+        this.metadata.rotation =
+          (currentTime * spinSpeed * 0.001) % (Math.PI * 2)
         break
     }
   }
@@ -431,7 +460,11 @@ export class CollectibleComponent extends Component {
   /**
    * Creates a collection event data object
    */
-  createCollectionEvent(collectorId: EntityId, position: Vector2, currentTime: number): CollectionEvent {
+  createCollectionEvent(
+    collectorId: EntityId,
+    position: Vector2,
+    currentTime: number
+  ): CollectionEvent {
     return {
       collectibleId: collectorId, // Note: This should be the collectible's entity ID
       collectorId,
@@ -439,7 +472,7 @@ export class CollectibleComponent extends Component {
       value: this.value * this.currentStack,
       rarity: this.rarity,
       position: { ...position },
-      timestamp: currentTime
+      timestamp: currentTime,
     }
   }
 
@@ -457,43 +490,47 @@ export class CollectibleComponent extends Component {
       effectIntensity: this.effectIntensity,
       isBeingAttracted: this.isBeingAttracted,
       timeRemaining: this.getTimeRemaining(Date.now()),
-      collectionProgress: this.getCollectionProgress(Date.now())
+      collectionProgress: this.getCollectionProgress(Date.now()),
     }
   }
 
   clone(): CollectibleComponent {
-    const clone = new CollectibleComponent(this.collectibleType, this.value, this.rarity)
-    
+    const clone = new CollectibleComponent(
+      this.collectibleType,
+      this.value,
+      this.rarity
+    )
+
     clone.stackSize = this.stackSize
     clone.currentStack = this.currentStack
     clone.collectionBehavior = this.collectionBehavior
     clone.autoCollectDelay = this.autoCollectDelay
     clone.canBeCollectedBy = [...this.canBeCollectedBy]
-    
+
     clone.magnetismConfig = { ...this.magnetismConfig }
-    
+
     clone.lifetime = this.lifetime
     clone.spawnTime = this.spawnTime
     clone.despawnOnCollect = this.despawnOnCollect
     clone.persistAfterDeath = this.persistAfterDeath
-    
+
     clone.visualEffect = this.visualEffect
     clone.effectIntensity = this.effectIntensity
     clone.soundEffect = this.soundEffect
     clone.collectSound = this.collectSound
-    
+
     clone.isBeingAttracted = this.isBeingAttracted
     clone.attractionTarget = this.attractionTarget
     clone.attractionStartTime = this.attractionStartTime
     clone.lastAttractionUpdate = this.lastAttractionUpdate
-    
-    clone.requirements = this.requirements.map(req => ({ ...req }))
+
+    clone.requirements = this.requirements.map((req) => ({ ...req }))
     clone.collectionMessage = this.collectionMessage
-    
+
     clone.metadata = { ...this.metadata }
     clone.dropSource = this.dropSource
     clone.isTemporary = this.isTemporary
-    
+
     clone.updatePriority = this.updatePriority
     clone.lastUpdateTime = this.lastUpdateTime
     clone.updateInterval = this.updateInterval
@@ -508,38 +545,38 @@ export class CollectibleComponent extends Component {
       value: this.value,
       stackSize: this.stackSize,
       currentStack: this.currentStack,
-      
+
       collectionBehavior: this.collectionBehavior,
       autoCollectDelay: this.autoCollectDelay,
       canBeCollectedBy: this.canBeCollectedBy,
-      
+
       magnetismConfig: this.magnetismConfig,
-      
+
       lifetime: this.lifetime,
       spawnTime: this.spawnTime,
       despawnOnCollect: this.despawnOnCollect,
       persistAfterDeath: this.persistAfterDeath,
-      
+
       visualEffect: this.visualEffect,
       effectIntensity: this.effectIntensity,
       soundEffect: this.soundEffect,
       collectSound: this.collectSound,
-      
+
       isBeingAttracted: this.isBeingAttracted,
       attractionTarget: this.attractionTarget,
       attractionStartTime: this.attractionStartTime,
       lastAttractionUpdate: this.lastAttractionUpdate,
-      
+
       requirements: this.requirements,
       collectionMessage: this.collectionMessage,
-      
+
       metadata: this.metadata,
       dropSource: this.dropSource,
       isTemporary: this.isTemporary,
-      
+
       updatePriority: this.updatePriority,
       lastUpdateTime: this.lastUpdateTime,
-      updateInterval: this.updateInterval
+      updateInterval: this.updateInterval,
     }
   }
 
@@ -549,35 +586,35 @@ export class CollectibleComponent extends Component {
     this.value = data.value as number
     this.stackSize = data.stackSize as number
     this.currentStack = data.currentStack as number
-    
+
     this.collectionBehavior = data.collectionBehavior as CollectionBehavior
     this.autoCollectDelay = data.autoCollectDelay as number
     this.canBeCollectedBy = data.canBeCollectedBy as EntityId[]
-    
+
     this.magnetismConfig = data.magnetismConfig as MagnetismConfig
-    
+
     this.lifetime = data.lifetime as number
     this.spawnTime = data.spawnTime as number
     this.despawnOnCollect = data.despawnOnCollect as boolean
     this.persistAfterDeath = data.persistAfterDeath as boolean
-    
+
     this.visualEffect = data.visualEffect as CollectibleEffect
     this.effectIntensity = data.effectIntensity as number
     this.soundEffect = data.soundEffect as string | null
     this.collectSound = data.collectSound as string | null
-    
+
     this.isBeingAttracted = data.isBeingAttracted as boolean
     this.attractionTarget = data.attractionTarget as EntityId | null
     this.attractionStartTime = data.attractionStartTime as number
     this.lastAttractionUpdate = data.lastAttractionUpdate as number
-    
+
     this.requirements = data.requirements as CollectionRequirement[]
     this.collectionMessage = data.collectionMessage as string | null
-    
+
     this.metadata = data.metadata as Record<string, unknown>
     this.dropSource = data.dropSource as EntityId | null
     this.isTemporary = data.isTemporary as boolean
-    
+
     this.updatePriority = data.updatePriority as number
     this.lastUpdateTime = data.lastUpdateTime as number
     this.updateInterval = data.updateInterval as number

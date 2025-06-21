@@ -29,9 +29,9 @@ describe('EconomySystem', () => {
     });
 
     it('should have default drop tables', () => {
-      expect((economySystem as any).dropTables.has('enemy_goblin')).toBe(true);
-      expect((economySystem as any).dropTables.has('enemy_orc')).toBe(true);
-      expect((economySystem as any).dropTables.has('boss_dragon')).toBe(true);
+      expect((economySystem as any).resourceDrops.has('basic_enemy')).toBe(true);
+      expect((economySystem as any).resourceDrops.has('elite_enemy')).toBe(true);
+      expect((economySystem as any).resourceDrops.has('boss_enemy')).toBe(true);
     });
   });
 
@@ -50,7 +50,7 @@ describe('EconomySystem', () => {
       // Mock Math.random to ensure drops
       const mockRandom = jest.spyOn(Math, 'random').mockReturnValue(0.1);
 
-      const drops = economySystem.dropResources(entity.id, 'enemy_goblin');
+      const drops = economySystem.dropResources(entity.id, 'basic_enemy');
 
       expect(drops.length).toBeGreaterThan(0);
       expect(resourceSpy).toHaveBeenCalled();
@@ -59,10 +59,15 @@ describe('EconomySystem', () => {
     });
 
     it('should respect drop chances', () => {
-      // Mock Math.random to prevent drops
+      // Register a test drop table with no guaranteed drops
+      economySystem.registerDropTable('test_enemy', [
+        { type: 'rare_item', amount: 1, chance: 0.01 }
+      ]);
+
+      // Mock Math.random to prevent drops (higher than 0.01)
       const mockRandom = jest.spyOn(Math, 'random').mockReturnValue(0.99);
 
-      const drops = economySystem.dropResources(entity.id, 'enemy_goblin');
+      const drops = economySystem.dropResources(entity.id, 'test_enemy');
 
       expect(drops.length).toBe(0);
 
@@ -91,7 +96,7 @@ describe('EconomySystem', () => {
       senderInventory.addResource('gold', 100);
 
       const transferSpy = jest.fn();
-      eventSystem.on('RESOURCE_TRANSFERRED', transferSpy);
+      eventSystem.on(GameEventType.RESOURCE_TRANSFERRED, transferSpy);
 
       const success = economySystem.transferResource(sender.id, receiver.id, 'gold', 50);
 
@@ -101,12 +106,14 @@ describe('EconomySystem', () => {
       const receiverInventory = receiver.getComponent('inventory') as InventoryComponent;
       expect(receiverInventory.getResource('gold')).toBe(50);
 
-      expect(transferSpy).toHaveBeenCalledWith({
-        fromEntityId: sender.id,
-        toEntityId: receiver.id,
-        resourceType: 'gold',
-        amount: 50
-      });
+      expect(transferSpy).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          fromEntityId: sender.id,
+          toEntityId: receiver.id,
+          resourceType: 'gold',
+          amount: 50
+        })
+      }));
     });
 
     it('should fail if sender has insufficient resources', () => {
@@ -207,7 +214,7 @@ describe('EconomySystem', () => {
       inventory.addResource('gold', 100);
 
       const purchaseSpy = jest.fn();
-      eventSystem.on('ITEM_PURCHASED', purchaseSpy);
+      eventSystem.on(GameEventType.ITEM_PURCHASED, purchaseSpy);
 
       const success = economySystem.purchaseItem(player.id, 'health_potion');
 
@@ -215,11 +222,13 @@ describe('EconomySystem', () => {
       expect(inventory.getResource('gold')).toBe(50);
       expect(inventory.getItemQuantity('health_potion')).toBe(1);
 
-      expect(purchaseSpy).toHaveBeenCalledWith({
-        entityId: player.id,
-        itemKey: 'health_potion',
-        cost: { gold: 50 }
-      });
+      expect(purchaseSpy).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          entityId: player.id,
+          itemType: 'health_potion',
+          cost: { gold: 50 }
+        })
+      }));
     });
 
     it('should fail if insufficient resources', () => {
@@ -343,6 +352,15 @@ describe('EconomySystem', () => {
   });
 
   describe('event handling', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.runOnlyPendingTimers();
+      jest.useRealTimers();
+    });
+
     it('should handle entity killed events', () => {
       const killer = world.createEntity();
       const victim = world.createEntity();

@@ -1,5 +1,12 @@
-import type { Component as IComponent, ComponentType } from '../../types/CoreTypes'
-import { ObjectPool, type PoolFactory, type Poolable } from '../../utils/Pooling'
+import type {
+  Component as IComponent,
+  ComponentType,
+} from '../../types/CoreTypes'
+import {
+  ObjectPool,
+  type PoolFactory,
+  type Poolable,
+} from '../../utils/Pooling'
 
 /**
  * Base class for all components in the ECS architecture.
@@ -37,7 +44,10 @@ export abstract class Component implements IComponent, Poolable {
  */
 export class ComponentRegistry {
   private static components = new Map<ComponentType, typeof Component>()
-  private static componentPools = new Map<ComponentType, ObjectPool<Component>>()
+  private static componentPools = new Map<
+    ComponentType,
+    ObjectPool<Component>
+  >()
   private static poolingEnabled = true
 
   /**
@@ -57,14 +67,14 @@ export class ComponentRegistry {
     if (ComponentRegistry.poolingEnabled) {
       const factory: PoolFactory<Component> = {
         create: () => new componentClass() as Component,
-        reset: (component: Component) => component.reset()
+        reset: (component: Component) => component.reset(),
       }
 
       const pool = new ObjectPool(factory, {
         initialSize: poolConfig?.initialSize ?? 50,
         maxSize: poolConfig?.maxSize ?? 1000,
         autoResize: true,
-        enableMetrics: true
+        enableMetrics: true,
       })
 
       ComponentRegistry.componentPools.set(type, pool)
@@ -92,12 +102,16 @@ export class ComponentRegistry {
         component = pool.acquire()
       } else {
         // No pool, create directly
-        const Constructor = ComponentClass as new (...args: unknown[]) => Component
+        const Constructor = ComponentClass as new (
+          ...args: unknown[]
+        ) => Component
         component = new Constructor()
       }
     } else {
       // Pooling disabled, create directly
-      const Constructor = ComponentClass as new (...args: unknown[]) => Component
+      const Constructor = ComponentClass as new (
+        ...args: unknown[]
+      ) => Component
       component = new Constructor()
     }
 
@@ -178,7 +192,7 @@ export class ComponentRegistry {
    */
   static clear(): void {
     // Clear all pools first
-    ComponentRegistry.componentPools.forEach(pool => pool.clear())
+    ComponentRegistry.componentPools.forEach((pool) => pool.clear())
     ComponentRegistry.componentPools.clear()
     ComponentRegistry.components.clear()
   }

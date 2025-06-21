@@ -5,7 +5,7 @@ import { Component } from '../core/ECS/Component'
  */
 export class ExperienceComponent extends Component {
   readonly type = 'experience'
-  
+
   level: number
   currentXP: number
   xpToNextLevel: number
@@ -24,7 +24,7 @@ export class ExperienceComponent extends Component {
    */
   addExperience(amount: number): number[] {
     const levelsGained: number[] = []
-    
+
     this.currentXP += amount
     this.totalXP += amount
 
@@ -67,7 +67,7 @@ export class ExperienceComponent extends Component {
    */
   setLevel(newLevel: number): void {
     if (newLevel < 1) return
-    
+
     this.level = newLevel
     this.currentXP = 0
     this.xpToNextLevel = this.calculateXPRequirement(newLevel + 1)

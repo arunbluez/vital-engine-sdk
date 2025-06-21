@@ -51,9 +51,10 @@ describe('ProgressionSystem', () => {
 
     it('should add experience points', () => {
       const initialXP = experience.totalXP;
-      const levels = experience.addExperience(150);
+      // Level 2 requires 100 * 2^1.5 = ~282 XP, so 300 XP should level up
+      const levels = experience.addExperience(300);
 
-      expect(experience.totalXP).toBe(initialXP + 150);
+      expect(experience.totalXP).toBe(initialXP + 300);
       expect(levels.length).toBeGreaterThan(0); // Should level up
       expect(experience.level).toBe(2);
     });
@@ -62,9 +63,10 @@ describe('ProgressionSystem', () => {
       experience.setLevel(5);
       const xpNeeded = experience.getXPToNextLevel();
 
-      // Formula: 100 * level^1.5
-      const expected = 100 * Math.pow(6, 1.5) - experience.currentXP;
-      expect(xpNeeded).toBeCloseTo(expected, 1);
+      // Formula: 100 * level^1.5 (for level 6, since we're at level 5)
+      // When setLevel(5) is called, currentXP is reset to 0 and xpToNextLevel is set to requirement for level 6
+      const expected = Math.floor(100 * Math.pow(6, 1.5)); // This should be ~1469
+      expect(xpNeeded).toBe(expected);
     });
 
     it('should track level progress', () => {
@@ -104,12 +106,17 @@ describe('ProgressionSystem', () => {
         victimType: 'enemy_goblin'
       });
 
-      expect(experienceSpy).toHaveBeenCalledWith({
-        entityId: player.id,
-        amount: expect.any(Number),
-        source: 'combat',
-        sourceDetails: { enemyType: 'enemy_goblin' }
-      });
+      expect(experienceSpy).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          entityId: player.id,
+          amount: expect.any(Number),
+          source: 'combat',
+          sourceDetails: expect.objectContaining({
+            enemyType: 'enemy_goblin'
+          }),
+          timestamp: expect.any(Number)
+        })
+      }));
     });
 
     it('should scale experience based on enemy type', () => {
@@ -123,7 +130,7 @@ describe('ProgressionSystem', () => {
         victimType: 'enemy_goblin'
       });
 
-      const regularXP = experienceSpy.mock.calls[0][0].amount;
+      const regularXP = experienceSpy.mock.calls[0][0].data.amount;
 
       // Boss enemy
       eventSystem.emit(GameEventType.ENTITY_KILLED, {
@@ -132,7 +139,7 @@ describe('ProgressionSystem', () => {
         victimType: 'boss_dragon'
       });
 
-      const bossXP = experienceSpy.mock.calls[1][0].amount;
+      const bossXP = experienceSpy.mock.calls[1][0].data.amount;
 
       expect(bossXP).toBeGreaterThan(regularXP);
     });
@@ -152,18 +159,18 @@ describe('ProgressionSystem', () => {
       const levelUpSpy = jest.fn();
       eventSystem.on(GameEventType.LEVEL_UP, levelUpSpy);
 
-      const experience = player.getComponent('experience') as ExperienceComponent;
-      experience.addExperience(200);
+      // Use the progression system to grant experience (which will emit events)
+      // Level 2 requires 282 XP, so give 300 to level up
+      progressionSystem.grantExperience(player.id, 300, 'test');
 
-      // Process level ups
-      const context = { deltaTime: 16, totalTime: 16, frameCount: 1 };
-      progressionSystem.update(context, []);
-
-      expect(levelUpSpy).toHaveBeenCalledWith({
-        entityId: player.id,
-        newLevel: 2,
-        previousLevel: 1
-      });
+      expect(levelUpSpy).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          entityId: player.id,
+          newLevel: 2,
+          previousLevel: 1,
+          timestamp: expect.any(Number)
+        })
+      }));
     });
 
     it('should increase stats on level up', () => {
@@ -173,12 +180,19 @@ describe('ProgressionSystem', () => {
       const initialMaxHealth = health.maximum;
       const initialDamage = combat.weapon.damage;
 
-      const experience = player.getComponent('experience') as ExperienceComponent;
-      experience.addExperience(200);
-
-      // Process level ups
+      // Use the progression system to grant experience and process level ups
+      // Level 2 requires 282 XP, so give 300 to level up
+      progressionSystem.grantExperience(player.id, 300, 'test');
+      
+      // Process level ups to apply stat increases
       const context = { deltaTime: 16, totalTime: 16, frameCount: 1 };
-      progressionSystem.update(context, []);
+      const playerQuery = {
+        id: player.id,
+        components: {
+          experience: player.getComponent('experience')
+        }
+      } as any;
+      progressionSystem.update(context, [playerQuery]);
 
       // Stats should increase
       expect(health.maximum).toBeGreaterThan(initialMaxHealth);

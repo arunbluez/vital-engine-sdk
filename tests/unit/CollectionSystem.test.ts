@@ -74,9 +74,11 @@ describe('CollectionSystem', () => {
       collectionSystem.update(context, entities as any);
 
       expect(collectionSpy).toHaveBeenCalledWith(expect.objectContaining({
-        type: 'collection',
-        collectorEntityId: collector.id,
-        collectibleEntityId: collectible.id
+        data: expect.objectContaining({
+          type: 'collection',
+          collectorEntityId: collector.id,
+          collectibleEntityId: collectible.id
+        })
       }));
     });
 
@@ -247,7 +249,7 @@ describe('CollectionSystem', () => {
       // Missing magnet component
 
       const invalidCollectible = world.createEntity();
-      invalidCollectible.addComponent(new CollectibleComponent());
+      invalidCollectible.addComponent(new CollectibleComponent(CollectibleType.EXPERIENCE));
       // Missing transform component
 
       const context = { deltaTime: 16, totalTime: 16, frameCount: 1 };

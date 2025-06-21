@@ -5,16 +5,16 @@
 // Type declarations for browser APIs not in standard TypeScript definitions
 declare global {
   interface IdleDeadline {
-    timeRemaining(): number;
-    readonly didTimeout: boolean;
+    timeRemaining(): number
+    readonly didTimeout: boolean
   }
 
   function requestIdleCallback(
     callback: (deadline: IdleDeadline) => void,
     options?: { timeout?: number }
-  ): number;
+  ): number
 
-  function cancelIdleCallback(id: number): void;
+  function cancelIdleCallback(id: number): void
 }
 
 export interface MemoryStats {
@@ -42,14 +42,14 @@ export class MemoryManager {
     allocations: 0,
     deallocations: 0,
     gcCount: 0,
-    lastGCTime: 0
+    lastGCTime: 0,
   }
 
   private config: GCConfig = {
     enabled: true,
     minInterval: 30000, // 30 seconds
     memoryThreshold: 100 * 1024 * 1024, // 100MB
-    idleGCDelay: 1000 // 1 second
+    idleGCDelay: 1000, // 1 second
   }
 
   private idleCallbackId: number | null = null
@@ -158,7 +158,7 @@ export class MemoryManager {
 
       // Schedule next idle callback
       this.idleCallbackId = requestIdleCallback(idleCallback, {
-        timeout: this.config.idleGCDelay
+        timeout: this.config.idleGCDelay,
       })
     }
 
@@ -187,7 +187,10 @@ export class MemoryManager {
    * Cancels idle GC callback
    */
   cancelIdleGC(): void {
-    if (this.idleCallbackId !== null && typeof cancelIdleCallback !== 'undefined') {
+    if (
+      this.idleCallbackId !== null &&
+      typeof cancelIdleCallback !== 'undefined'
+    ) {
       cancelIdleCallback(this.idleCallbackId)
       this.idleCallbackId = null
     }
@@ -308,7 +311,7 @@ export class ArrayPool<T> {
   release(array: T[]): void {
     const size = array.length
     let sizePool = this.pools.get(size)
-    
+
     if (!sizePool) {
       sizePool = []
       this.pools.set(size, sizePool)
@@ -340,19 +343,31 @@ export const globalMemoryManager = new MemoryManager()
  */
 export const CommonRecyclers = {
   arrays: new ArrayPool(),
-  
+
   vector2: new ObjectRecycler(
     () => ({ x: 0, y: 0 }),
-    (v) => { v.x = 0; v.y = 0 }
+    (v) => {
+      v.x = 0
+      v.y = 0
+    }
   ),
-  
+
   vector3: new ObjectRecycler(
     () => ({ x: 0, y: 0, z: 0 }),
-    (v) => { v.x = 0; v.y = 0; v.z = 0 }
+    (v) => {
+      v.x = 0
+      v.y = 0
+      v.z = 0
+    }
   ),
-  
+
   bounds: new ObjectRecycler(
     () => ({ minX: 0, minY: 0, maxX: 0, maxY: 0 }),
-    (b) => { b.minX = 0; b.minY = 0; b.maxX = 0; b.maxY = 0 }
-  )
+    (b) => {
+      b.minX = 0
+      b.minY = 0
+      b.maxX = 0
+      b.maxY = 0
+    }
+  ),
 }

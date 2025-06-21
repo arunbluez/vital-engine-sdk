@@ -16,22 +16,22 @@ export enum AIState {
   INVESTIGATE = 'investigate',
   RETREAT = 'retreat',
   SUPPORT = 'support',
-  GUARD = 'guard'
+  GUARD = 'guard',
 }
 
 /**
  * AI personality types that affect decision making
  */
 export enum AIPersonality {
-  AGGRESSIVE = 'aggressive',     // High aggression, low fear
-  DEFENSIVE = 'defensive',       // Balanced, prioritizes survival
-  COWARD = 'coward',            // Low aggression, high fear
-  BERSERKER = 'berserker',      // Ignores health, always attacks
-  TACTICAL = 'tactical',        // Smart positioning, hit and run
-  SUPPORT = 'support',          // Heals/buffs allies
-  GUARDIAN = 'guardian',        // Protects specific area/entity
-  HUNTER = 'hunter',            // Stalks and ambushes
-  SWARM = 'swarm'              // Coordinates with nearby allies
+  AGGRESSIVE = 'aggressive', // High aggression, low fear
+  DEFENSIVE = 'defensive', // Balanced, prioritizes survival
+  COWARD = 'coward', // Low aggression, high fear
+  BERSERKER = 'berserker', // Ignores health, always attacks
+  TACTICAL = 'tactical', // Smart positioning, hit and run
+  SUPPORT = 'support', // Heals/buffs allies
+  GUARDIAN = 'guardian', // Protects specific area/entity
+  HUNTER = 'hunter', // Stalks and ambushes
+  SWARM = 'swarm', // Coordinates with nearby allies
 }
 
 /**
@@ -84,7 +84,7 @@ export enum BehaviorNodeType {
   PARALLEL = 'parallel',
   DECORATOR = 'decorator',
   ACTION = 'action',
-  CONDITION = 'condition'
+  CONDITION = 'condition',
 }
 
 /**
@@ -155,7 +155,7 @@ export class AIComponent extends Component {
     lastSeenPositions: new Map(),
     damageReceived: new Map(),
     threatLevels: new Map(),
-    blackboard: new Map()
+    blackboard: new Map(),
   }
 
   // Performance optimization
@@ -258,19 +258,21 @@ export class AIComponent extends Component {
         from: AIState.IDLE,
         to: AIState.PATROL,
         condition: (ctx) => this.patrolPath.length > 0 && !ctx.nearbyEnemies,
-        priority: 1
+        priority: 1,
       },
       {
         from: AIState.IDLE,
         to: AIState.INVESTIGATE,
-        condition: (ctx) => this.curiosity > 0.5 && ctx.nearbyEnemies > 0 && !ctx.targetVisible,
-        priority: 2
+        condition: (ctx) =>
+          this.curiosity > 0.5 && ctx.nearbyEnemies > 0 && !ctx.targetVisible,
+        priority: 2,
       },
       {
         from: AIState.IDLE,
         to: AIState.CHASE,
-        condition: (ctx) => ctx.targetVisible && ctx.distanceToTarget > this.attackRange,
-        priority: 3
+        condition: (ctx) =>
+          ctx.targetVisible && ctx.distanceToTarget > this.attackRange,
+        priority: 3,
       },
 
       // PATROL transitions
@@ -278,13 +280,13 @@ export class AIComponent extends Component {
         from: AIState.PATROL,
         to: AIState.CHASE,
         condition: (ctx) => ctx.targetVisible && this.aggressionLevel > 0.3,
-        priority: 3
+        priority: 3,
       },
       {
         from: AIState.PATROL,
         to: AIState.INVESTIGATE,
         condition: (ctx) => ctx.nearbyEnemies > 0 && !ctx.targetVisible,
-        priority: 2
+        priority: 2,
       },
 
       // CHASE transitions
@@ -292,19 +294,20 @@ export class AIComponent extends Component {
         from: AIState.CHASE,
         to: AIState.ATTACK,
         condition: (ctx) => ctx.distanceToTarget <= this.attackRange,
-        priority: 4
+        priority: 4,
       },
       {
         from: AIState.CHASE,
         to: AIState.FLEE,
-        condition: (ctx) => ctx.health / ctx.maxHealth < 0.3 && this.fearLevel > 0.5,
-        priority: 5
+        condition: (ctx) =>
+          ctx.health / ctx.maxHealth < 0.3 && this.fearLevel > 0.5,
+        priority: 5,
       },
       {
         from: AIState.CHASE,
         to: AIState.INVESTIGATE,
         condition: (ctx) => !ctx.targetVisible && ctx.currentStateTime > 3000,
-        priority: 2
+        priority: 2,
       },
 
       // ATTACK transitions
@@ -312,19 +315,21 @@ export class AIComponent extends Component {
         from: AIState.ATTACK,
         to: AIState.CHASE,
         condition: (ctx) => ctx.distanceToTarget > this.attackRange,
-        priority: 3
+        priority: 3,
       },
       {
         from: AIState.ATTACK,
         to: AIState.FLEE,
-        condition: (ctx) => ctx.health / ctx.maxHealth < 0.2 && this.fearLevel > 0.3,
-        priority: 5
+        condition: (ctx) =>
+          ctx.health / ctx.maxHealth < 0.2 && this.fearLevel > 0.3,
+        priority: 5,
       },
       {
         from: AIState.ATTACK,
         to: AIState.RETREAT,
-        condition: (ctx) => ctx.nearbyEnemies > 3 && this.personality === AIPersonality.TACTICAL,
-        priority: 4
+        condition: (ctx) =>
+          ctx.nearbyEnemies > 3 && this.personality === AIPersonality.TACTICAL,
+        priority: 4,
       },
 
       // FLEE transitions
@@ -332,13 +337,14 @@ export class AIComponent extends Component {
         from: AIState.FLEE,
         to: AIState.IDLE,
         condition: (ctx) => ctx.distanceToTarget > this.fleeDistance,
-        priority: 2
+        priority: 2,
       },
       {
         from: AIState.FLEE,
         to: AIState.SUPPORT,
-        condition: (ctx) => ctx.nearbyAllies > 2 && this.personality === AIPersonality.SUPPORT,
-        priority: 3
+        condition: (ctx) =>
+          ctx.nearbyAllies > 2 && this.personality === AIPersonality.SUPPORT,
+        priority: 3,
       },
 
       // INVESTIGATE transitions
@@ -346,14 +352,14 @@ export class AIComponent extends Component {
         from: AIState.INVESTIGATE,
         to: AIState.CHASE,
         condition: (ctx) => ctx.targetVisible,
-        priority: 3
+        priority: 3,
       },
       {
         from: AIState.INVESTIGATE,
         to: AIState.IDLE,
         condition: (ctx) => ctx.currentStateTime > 5000,
-        priority: 1
-      }
+        priority: 1,
+      },
     ]
   }
 
@@ -369,7 +375,7 @@ export class AIComponent extends Component {
 
     // Find transition
     const transition = this.stateTransitions.find(
-      t => t.from === this.currentState && t.to === newState
+      (t) => t.from === this.currentState && t.to === newState
     )
 
     // Execute exit callback
@@ -401,8 +407,8 @@ export class AIComponent extends Component {
 
     // Check all valid transitions from current state
     const validTransitions = this.stateTransitions
-      .filter(t => t.from === this.currentState)
-      .filter(t => t.condition(context))
+      .filter((t) => t.from === this.currentState)
+      .filter((t) => t.condition(context))
       .sort((a, b) => b.priority - a.priority)
 
     if (validTransitions.length > 0) {
@@ -454,17 +460,21 @@ export class AIComponent extends Component {
       case BehaviorNodeType.DECORATOR:
         if (!node.children || node.children.length === 0) return false
         const childResult = this.executeNode(node.children[0], context)
-        
+
         switch (node.decorator?.type) {
-          case 'invert': return !childResult
-          case 'succeed': return true
-          case 'fail': return false
+          case 'invert':
+            return !childResult
+          case 'succeed':
+            return true
+          case 'fail':
+            return false
           case 'repeat':
             for (let i = 0; i < (node.decorator.times || 1); i++) {
               this.executeNode(node.children[0], context)
             }
             return true
-          default: return childResult
+          default:
+            return childResult
         }
 
       case BehaviorNodeType.CONDITION:
@@ -496,7 +506,10 @@ export class AIComponent extends Component {
    */
   updateThreatLevel(entityId: EntityId, threat: number): void {
     const currentThreat = this.memory.threatLevels.get(entityId) || 0
-    this.memory.threatLevels.set(entityId, Math.max(0, Math.min(1, currentThreat + threat)))
+    this.memory.threatLevels.set(
+      entityId,
+      Math.max(0, Math.min(1, currentThreat + threat))
+    )
   }
 
   /**
@@ -576,7 +589,7 @@ export class AIComponent extends Component {
 
     const distance = Math.sqrt(
       Math.pow(currentPosition.x - this.lastPosition.x, 2) +
-      Math.pow(currentPosition.y - this.lastPosition.y, 2)
+        Math.pow(currentPosition.y - this.lastPosition.y, 2)
     )
 
     if (distance < 1) {
@@ -591,61 +604,63 @@ export class AIComponent extends Component {
 
   clone(): AIComponent {
     const clone = new AIComponent(this.personality)
-    
+
     // Copy all properties
     clone.currentState = this.currentState
     clone.previousState = this.previousState
     clone.stateTransitions = [...this.stateTransitions]
     clone.stateStartTime = this.stateStartTime
     clone.stateCooldowns = new Map(this.stateCooldowns)
-    
+
     clone.behaviorTree = this.behaviorTree
     clone.aggressionLevel = this.aggressionLevel
     clone.fearLevel = this.fearLevel
     clone.curiosity = this.curiosity
     clone.loyalty = this.loyalty
-    
+
     clone.targetId = this.targetId
-    clone.targetPosition = this.targetPosition ? { ...this.targetPosition } : null
+    clone.targetPosition = this.targetPosition
+      ? { ...this.targetPosition }
+      : null
     clone.homePosition = this.homePosition ? { ...this.homePosition } : null
     clone.guardPosition = this.guardPosition ? { ...this.guardPosition } : null
-    clone.patrolPath = this.patrolPath.map(p => ({ ...p }))
+    clone.patrolPath = this.patrolPath.map((p) => ({ ...p }))
     clone.currentPatrolIndex = this.currentPatrolIndex
-    
+
     clone.sightRange = this.sightRange
     clone.hearingRange = this.hearingRange
     clone.attackRange = this.attackRange
     clone.fleeDistance = this.fleeDistance
     clone.fieldOfView = this.fieldOfView
-    
+
     clone.moveSpeed = this.moveSpeed
     clone.turnSpeed = this.turnSpeed
     clone.preferredDistance = this.preferredDistance
     clone.avoidanceRadius = this.avoidanceRadius
-    
+
     clone.attackCooldown = this.attackCooldown
     clone.lastAttackTime = this.lastAttackTime
     clone.damageDealt = this.damageDealt
     clone.damageReceived = this.damageReceived
-    
+
     clone.memory = {
       lastSeenPositions: new Map(this.memory.lastSeenPositions),
       damageReceived: new Map(this.memory.damageReceived),
       threatLevels: new Map(this.memory.threatLevels),
-      blackboard: new Map(this.memory.blackboard)
+      blackboard: new Map(this.memory.blackboard),
     }
-    
+
     clone.updatePriority = this.updatePriority
     clone.lastUpdateTime = this.lastUpdateTime
     clone.updateInterval = this.updateInterval
-    
+
     clone.currentPath = [...this.currentPath]
     clone.pathIndex = this.pathIndex
     clone.lastPathfindTime = this.lastPathfindTime
     clone.pathfindCooldown = this.pathfindCooldown
     clone.stuckCounter = this.stuckCounter
     clone.lastPosition = this.lastPosition ? { ...this.lastPosition } : null
-    
+
     return clone
   }
 
@@ -655,53 +670,53 @@ export class AIComponent extends Component {
       previousState: this.previousState,
       stateStartTime: this.stateStartTime,
       stateCooldowns: Array.from(this.stateCooldowns.entries()),
-      
+
       personality: this.personality,
       aggressionLevel: this.aggressionLevel,
       fearLevel: this.fearLevel,
       curiosity: this.curiosity,
       loyalty: this.loyalty,
-      
+
       targetId: this.targetId,
       targetPosition: this.targetPosition,
       homePosition: this.homePosition,
       guardPosition: this.guardPosition,
       patrolPath: this.patrolPath,
       currentPatrolIndex: this.currentPatrolIndex,
-      
+
       sightRange: this.sightRange,
       hearingRange: this.hearingRange,
       attackRange: this.attackRange,
       fleeDistance: this.fleeDistance,
       fieldOfView: this.fieldOfView,
-      
+
       moveSpeed: this.moveSpeed,
       turnSpeed: this.turnSpeed,
       preferredDistance: this.preferredDistance,
       avoidanceRadius: this.avoidanceRadius,
-      
+
       attackCooldown: this.attackCooldown,
       lastAttackTime: this.lastAttackTime,
       damageDealt: this.damageDealt,
       damageReceived: this.damageReceived,
-      
+
       memory: {
         lastSeenPositions: Array.from(this.memory.lastSeenPositions.entries()),
         damageReceived: Array.from(this.memory.damageReceived.entries()),
         threatLevels: Array.from(this.memory.threatLevels.entries()),
-        blackboard: Array.from(this.memory.blackboard.entries())
+        blackboard: Array.from(this.memory.blackboard.entries()),
       },
-      
+
       updatePriority: this.updatePriority,
       lastUpdateTime: this.lastUpdateTime,
       updateInterval: this.updateInterval,
-      
+
       currentPath: this.currentPath,
       pathIndex: this.pathIndex,
       lastPathfindTime: this.lastPathfindTime,
       pathfindCooldown: this.pathfindCooldown,
       stuckCounter: this.stuckCounter,
-      lastPosition: this.lastPosition
+      lastPosition: this.lastPosition,
     }
   }
 
@@ -710,55 +725,55 @@ export class AIComponent extends Component {
     this.previousState = data.previousState as AIState
     this.stateStartTime = data.stateStartTime as number
     this.stateCooldowns = new Map(data.stateCooldowns as any)
-    
+
     this.personality = data.personality as AIPersonality
     this.aggressionLevel = data.aggressionLevel as number
     this.fearLevel = data.fearLevel as number
     this.curiosity = data.curiosity as number
     this.loyalty = data.loyalty as number
-    
+
     this.targetId = data.targetId as EntityId | null
     this.targetPosition = data.targetPosition as Vector2 | null
     this.homePosition = data.homePosition as Vector2 | null
     this.guardPosition = data.guardPosition as Vector2 | null
     this.patrolPath = data.patrolPath as Vector2[]
     this.currentPatrolIndex = data.currentPatrolIndex as number
-    
+
     this.sightRange = data.sightRange as number
     this.hearingRange = data.hearingRange as number
     this.attackRange = data.attackRange as number
     this.fleeDistance = data.fleeDistance as number
     this.fieldOfView = data.fieldOfView as number
-    
+
     this.moveSpeed = data.moveSpeed as number
     this.turnSpeed = data.turnSpeed as number
     this.preferredDistance = data.preferredDistance as number
     this.avoidanceRadius = data.avoidanceRadius as number
-    
+
     this.attackCooldown = data.attackCooldown as number
     this.lastAttackTime = data.lastAttackTime as number
     this.damageDealt = data.damageDealt as number
     this.damageReceived = data.damageReceived as number
-    
+
     const memoryData = data.memory as any
     this.memory = {
       lastSeenPositions: new Map(memoryData.lastSeenPositions),
       damageReceived: new Map(memoryData.damageReceived),
       threatLevels: new Map(memoryData.threatLevels),
-      blackboard: new Map(memoryData.blackboard)
+      blackboard: new Map(memoryData.blackboard),
     }
-    
+
     this.updatePriority = data.updatePriority as number
     this.lastUpdateTime = data.lastUpdateTime as number
     this.updateInterval = data.updateInterval as number
-    
+
     this.currentPath = data.currentPath as Vector2[]
     this.pathIndex = data.pathIndex as number
     this.lastPathfindTime = data.lastPathfindTime as number
     this.pathfindCooldown = data.pathfindCooldown as number
     this.stuckCounter = data.stuckCounter as number
     this.lastPosition = data.lastPosition as Vector2 | null
-    
+
     // Reinitialize state machine
     this.initializeStateMachine()
   }

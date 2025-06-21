@@ -6,7 +6,7 @@ import type { Vector2 } from '../types/GameTypes'
  */
 export class MovementComponent extends Component {
   readonly type = 'movement'
-  
+
   velocity: Vector2
   acceleration: Vector2
   maxSpeed: number
@@ -61,7 +61,9 @@ export class MovementComponent extends Component {
    * Gets the current speed (magnitude of velocity)
    */
   getSpeed(): number {
-    return Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y)
+    return Math.sqrt(
+      this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y
+    )
   }
 
   /**
@@ -127,14 +129,18 @@ export class MovementComponent extends Component {
 
   deserialize(data: Record<string, unknown>): void {
     const velocity = data.velocity as { x: number; y: number } | undefined
-    const acceleration = data.acceleration as { x: number; y: number } | undefined
-    
+    const acceleration = data.acceleration as
+      | { x: number; y: number }
+      | undefined
+
     this.velocity.x = velocity?.x !== undefined ? velocity.x : 0
     this.velocity.y = velocity?.y !== undefined ? velocity.y : 0
     this.acceleration.x = acceleration?.x !== undefined ? acceleration.x : 0
     this.acceleration.y = acceleration?.y !== undefined ? acceleration.y : 0
-    this.maxSpeed = data.maxSpeed !== undefined ? data.maxSpeed as number : 100
-    this.friction = data.friction !== undefined ? data.friction as number : 0.8
+    this.maxSpeed =
+      data.maxSpeed !== undefined ? (data.maxSpeed as number) : 100
+    this.friction =
+      data.friction !== undefined ? (data.friction as number) : 0.8
   }
 
   reset(): void {

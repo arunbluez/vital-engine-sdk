@@ -1,8 +1,8 @@
 import { System } from '../core/ECS/System'
-import type { 
-  EntityQuery, 
-  SystemUpdateContext, 
-  ComponentType 
+import type {
+  EntityQuery,
+  SystemUpdateContext,
+  ComponentType,
 } from '../types/CoreTypes'
 import type { InventoryComponent, ItemStack } from '../components/Inventory'
 import { GameEventType } from '../types/Events'
@@ -57,6 +57,13 @@ export class EconomySystem extends System {
       { type: 'xp_gem', amount: 3, chance: 0.7 },
       { type: 'rare_material', amount: 1, chance: 0.1 },
     ])
+
+    this.resourceDrops.set('boss_enemy', [
+      { type: 'gold', amount: 100, chance: 1.0 },
+      { type: 'xp_gem', amount: 10, chance: 1.0 },
+      { type: 'rare_material', amount: 5, chance: 0.8 },
+      { type: 'legendary_item', amount: 1, chance: 0.2 },
+    ])
   }
 
   update(_context: SystemUpdateContext, _entities: EntityQuery[]): void {
@@ -66,7 +73,10 @@ export class EconomySystem extends System {
 
   initialize(): void {
     if (this.eventSystem) {
-      this.eventSystem.on(GameEventType.ENTITY_KILLED, this.handleEntityKilled.bind(this))
+      this.eventSystem.on(
+        GameEventType.ENTITY_KILLED,
+        this.handleEntityKilled.bind(this)
+      )
     }
   }
 
@@ -89,7 +99,7 @@ export class EconomySystem extends System {
     }
 
     const entities = this.getEntitiesWithInventory()
-    const entity = entities.find(e => e.id === entityId)
+    const entity = entities.find((e) => e.id === entityId)
 
     if (!entity) {
       return []
@@ -97,10 +107,13 @@ export class EconomySystem extends System {
 
     const droppedItems: ItemStack[] = []
 
-    drops.forEach(drop => {
+    drops.forEach((drop) => {
       if (Math.random() < drop.chance) {
-        const success = entity.components.inventory.addResource(drop.type, drop.amount)
-        
+        const success = entity.components.inventory.addResource(
+          drop.type,
+          drop.amount
+        )
+
         if (success) {
           droppedItems.push({
             type: drop.type,
@@ -133,8 +146,8 @@ export class EconomySystem extends System {
     amount: number
   ): boolean {
     const entities = this.getEntitiesWithInventory()
-    const fromEntity = entities.find(e => e.id === fromEntityId)
-    const toEntity = entities.find(e => e.id === toEntityId)
+    const fromEntity = entities.find((e) => e.id === fromEntityId)
+    const toEntity = entities.find((e) => e.id === toEntityId)
 
     if (!fromEntity || !toEntity) {
       return false
@@ -146,7 +159,10 @@ export class EconomySystem extends System {
     }
 
     // Perform the transfer
-    const removed = fromEntity.components.inventory.removeResource(resourceType, amount)
+    const removed = fromEntity.components.inventory.removeResource(
+      resourceType,
+      amount
+    )
     if (!removed) {
       return false
     }
@@ -154,7 +170,7 @@ export class EconomySystem extends System {
     toEntity.components.inventory.addResource(resourceType, amount)
 
     if (this.eventSystem) {
-      this.eventSystem.emit('RESOURCE_TRANSFERRED', {
+      this.eventSystem.emit(GameEventType.RESOURCE_TRANSFERRED, {
         fromEntityId,
         toEntityId,
         resourceType,
@@ -177,15 +193,17 @@ export class EconomySystem extends System {
     metadata?: Record<string, unknown>
   ): boolean {
     const entities = this.getEntitiesWithInventory()
-    const fromEntity = entities.find(e => e.id === fromEntityId)
-    const toEntity = entities.find(e => e.id === toEntityId)
+    const fromEntity = entities.find((e) => e.id === fromEntityId)
+    const toEntity = entities.find((e) => e.id === toEntityId)
 
     if (!fromEntity || !toEntity) {
       return false
     }
 
     // Check if sender has the item
-    if (!fromEntity.components.inventory.hasItem(itemType, quantity, metadata)) {
+    if (
+      !fromEntity.components.inventory.hasItem(itemType, quantity, metadata)
+    ) {
       return false
     }
 
@@ -195,7 +213,11 @@ export class EconomySystem extends System {
     }
 
     // Perform the transfer
-    const removed = fromEntity.components.inventory.removeItem(itemType, quantity, metadata)
+    const removed = fromEntity.components.inventory.removeItem(
+      itemType,
+      quantity,
+      metadata
+    )
     if (!removed) {
       return false
     }
@@ -245,7 +267,7 @@ export class EconomySystem extends System {
     }
 
     const entities = this.getEntitiesWithInventory()
-    const entity = entities.find(e => e.id === entityId)
+    const entity = entities.find((e) => e.id === entityId)
 
     if (!entity) {
       return false
@@ -289,7 +311,7 @@ export class EconomySystem extends System {
     }
 
     if (this.eventSystem) {
-      this.eventSystem.emit('ITEM_PURCHASED', {
+      this.eventSystem.emit(GameEventType.ITEM_PURCHASED, {
         entityId,
         itemType: shopItem.itemType,
         cost: shopItem.cost,
@@ -317,9 +339,12 @@ export class EconomySystem extends System {
   /**
    * Gets the total value of an entity's resources
    */
-  calculateNetWorth(entityId: number, valuationTable: Record<string, number>): number {
+  calculateNetWorth(
+    entityId: number,
+    valuationTable: Record<string, number>
+  ): number {
     const entities = this.getEntitiesWithInventory()
-    const entity = entities.find(e => e.id === entityId)
+    const entity = entities.find((e) => e.id === entityId)
 
     if (!entity) {
       return 0
@@ -334,7 +359,7 @@ export class EconomySystem extends System {
     })
 
     // Calculate item values
-    entity.components.inventory.items.forEach(item => {
+    entity.components.inventory.items.forEach((item) => {
       const value = valuationTable[item.type] ?? 0
       totalValue += item.quantity * value
     })
@@ -354,8 +379,8 @@ export class EconomySystem extends System {
     return entities.map((entity: any) => ({
       id: entity.id,
       components: {
-        inventory: entity.getComponent('inventory')
-      }
+        inventory: entity.getComponent('inventory'),
+      },
     }))
   }
 }

@@ -7,37 +7,37 @@ import { Vector2Math } from '../utils/Math'
  * Magnet field types
  */
 export enum MagnetFieldType {
-  CIRCULAR = 'circular',       // Circular magnetic field
+  CIRCULAR = 'circular', // Circular magnetic field
   DIRECTIONAL = 'directional', // Directional pull (like vacuum)
-  PULSE = 'pulse',            // Pulsing magnetic field
-  SELECTIVE = 'selective',     // Only attracts specific types
-  REPULSIVE = 'repulsive'     // Pushes items away
+  PULSE = 'pulse', // Pulsing magnetic field
+  SELECTIVE = 'selective', // Only attracts specific types
+  REPULSIVE = 'repulsive', // Pushes items away
 }
 
 /**
  * Magnet target types
  */
 export enum MagnetTargetType {
-  ALL = 'all',                // Attracts all collectibles
-  EXPERIENCE = 'experience',   // Only experience orbs
-  CURRENCY = 'currency',       // Only currency items
-  POWER_UPS = 'power_ups',    // Only power-ups
-  WEAPONS = 'weapons',        // Only weapons
-  RARE_ONLY = 'rare_only',    // Only rare+ items
-  CUSTOM = 'custom'           // Custom filter logic
+  ALL = 'all', // Attracts all collectibles
+  EXPERIENCE = 'experience', // Only experience orbs
+  CURRENCY = 'currency', // Only currency items
+  POWER_UPS = 'power_ups', // Only power-ups
+  WEAPONS = 'weapons', // Only weapons
+  RARE_ONLY = 'rare_only', // Only rare+ items
+  CUSTOM = 'custom', // Custom filter logic
 }
 
 /**
  * Magnet activation trigger
  */
 export enum MagnetTrigger {
-  ALWAYS = 'always',          // Always active
-  MANUAL = 'manual',          // Activated manually
-  ON_DAMAGE = 'on_damage',    // Activates when taking damage
-  ON_KILL = 'on_kill',        // Activates on enemy kill
-  ON_SKILL = 'on_skill',      // Activates when using skills
-  PERIODIC = 'periodic',      // Activates periodically
-  LOW_HEALTH = 'low_health'   // Activates when health is low
+  ALWAYS = 'always', // Always active
+  MANUAL = 'manual', // Activated manually
+  ON_DAMAGE = 'on_damage', // Activates when taking damage
+  ON_KILL = 'on_kill', // Activates on enemy kill
+  ON_SKILL = 'on_skill', // Activates when using skills
+  PERIODIC = 'periodic', // Activates periodically
+  LOW_HEALTH = 'low_health', // Activates when health is low
 }
 
 /**
@@ -45,11 +45,11 @@ export enum MagnetTrigger {
  */
 export interface MagneticField {
   type: MagnetFieldType
-  range: number               // Base attraction range
-  strength: number           // Base attraction strength
-  efficiency: number         // How effectively items are pulled (0-1)
-  maxTargets: number        // Maximum items that can be attracted simultaneously
-  decayRate: number         // How force diminishes over distance
+  range: number // Base attraction range
+  strength: number // Base attraction strength
+  efficiency: number // How effectively items are pulled (0-1)
+  maxTargets: number // Maximum items that can be attracted simultaneously
+  decayRate: number // How force diminishes over distance
 }
 
 /**
@@ -57,9 +57,9 @@ export interface MagneticField {
  */
 export interface CollectionFilter {
   targetType: MagnetTargetType
-  minRarity?: string         // Minimum rarity to attract
-  maxDistance?: number       // Override magnetic range for this filter
-  priority: number          // Priority when multiple filters match
+  minRarity?: string // Minimum rarity to attract
+  maxDistance?: number // Override magnetic range for this filter
+  priority: number // Priority when multiple filters match
   customPredicate?: (collectible: unknown) => boolean
 }
 
@@ -83,13 +83,14 @@ export class MagnetComponent extends Component {
 
   // Core magnet properties
   public active: boolean = true
+  public collectionRadius: number = 30 // Radius for actual collection
   public magneticField: MagneticField = {
     type: MagnetFieldType.CIRCULAR,
     range: 100,
     strength: 200,
     efficiency: 1.0,
     maxTargets: 10,
-    decayRate: 0.5
+    decayRate: 0.5,
   }
 
   // Activation and control
@@ -108,13 +109,13 @@ export class MagnetComponent extends Component {
   public rangeMultiplier: number = 1.0
   public strengthMultiplier: number = 1.0
   public efficiencyBonus: number = 0.0
-  public experienceBonus: number = 0.0    // Extra XP from collected items
-  public currencyBonus: number = 0.0      // Extra currency from collected items
+  public experienceBonus: number = 0.0 // Extra XP from collected items
+  public currencyBonus: number = 0.0 // Extra currency from collected items
 
   // Pulse magnetism (for pulse type)
-  public pulseInterval: number = 3000     // Time between pulses
-  public pulseStrength: number = 2.0      // Multiplier during pulse
-  public pulseDuration: number = 1000     // How long the pulse lasts
+  public pulseInterval: number = 3000 // Time between pulses
+  public pulseStrength: number = 2.0 // Multiplier during pulse
+  public pulseDuration: number = 1000 // How long the pulse lasts
   public lastPulseTime: number = 0
   public isPulsing: boolean = false
 
@@ -125,9 +126,9 @@ export class MagnetComponent extends Component {
   public soundEnabled: boolean = true
 
   // Performance optimization
-  public updateInterval: number = 200     // Update every 200ms
+  public updateInterval: number = 200 // Update every 200ms
   public lastUpdateTime: number = 0
-  public maxUpdatesPerFrame: number = 5   // Limit attraction calculations
+  public maxUpdatesPerFrame: number = 5 // Limit attraction calculations
   public currentUpdates: number = 0
 
   // Statistics tracking
@@ -137,7 +138,7 @@ export class MagnetComponent extends Component {
     averageCollectionTime: 0,
     mostValuableItemCollected: 0,
     lastActivationTime: 0,
-    activationCount: 0
+    activationCount: 0,
   }
 
   // Temporary modifiers (for skills/power-ups)
@@ -159,7 +160,7 @@ export class MagnetComponent extends Component {
     // Default filter attracts all items
     this.collectionFilters.push({
       targetType: MagnetTargetType.ALL,
-      priority: 1
+      priority: 1,
     })
   }
 
@@ -176,7 +177,9 @@ export class MagnetComponent extends Component {
    * Removes a collection filter
    */
   removeFilter(targetType: MagnetTargetType): void {
-    this.collectionFilters = this.collectionFilters.filter(f => f.targetType !== targetType)
+    this.collectionFilters = this.collectionFilters.filter(
+      (f) => f.targetType !== targetType
+    )
   }
 
   /**
@@ -215,7 +218,10 @@ export class MagnetComponent extends Component {
    * Manually activates the magnet
    */
   activate(currentTime: number): boolean {
-    if (this.trigger === MagnetTrigger.MANUAL || this.trigger === MagnetTrigger.PERIODIC) {
+    if (
+      this.trigger === MagnetTrigger.MANUAL ||
+      this.trigger === MagnetTrigger.PERIODIC
+    ) {
       // Check cooldown
       if (currentTime - this.lastActivationTime < this.activationCooldown) {
         return false
@@ -280,15 +286,24 @@ export class MagnetComponent extends Component {
     }
 
     // Check filters
-    return this.collectionFilters.some(filter => this.filterMatches(filter, collectible))
+    return this.collectionFilters.some((filter) =>
+      this.filterMatches(filter, collectible)
+    )
   }
 
   /**
    * Checks if a collection filter matches an item
    */
-  private filterMatches(filter: CollectionFilter, collectible: Record<string, unknown>): boolean {
-    const getComponent = collectible.getComponent as ((type: string) => unknown) | undefined
-    const collectibleComponent = getComponent?.('collectible') as Record<string, unknown> | undefined
+  private filterMatches(
+    filter: CollectionFilter,
+    collectible: Record<string, unknown>
+  ): boolean {
+    const getComponent = collectible.getComponent as
+      | ((type: string) => unknown)
+      | undefined
+    const collectibleComponent = getComponent?.('collectible') as
+      | Record<string, unknown>
+      | undefined
     if (!collectibleComponent) {
       return false
     }
@@ -314,7 +329,9 @@ export class MagnetComponent extends Component {
         return rarity === 'rare' || rarity === 'epic' || rarity === 'legendary'
 
       case MagnetTargetType.CUSTOM:
-        return filter.customPredicate ? filter.customPredicate(collectible) : false
+        return filter.customPredicate
+          ? filter.customPredicate(collectible)
+          : false
 
       default:
         return false
@@ -339,7 +356,7 @@ export class MagnetComponent extends Component {
 
     // Calculate force based on field type
     let force = this.calculateForceByType(distance, effectiveRange, currentTime)
-    
+
     // Apply efficiency
     force *= this.magneticField.efficiency
 
@@ -347,16 +364,20 @@ export class MagnetComponent extends Component {
     const normalizedDirection = Vector2Math.normalize(direction)
     return {
       x: normalizedDirection.x * force,
-      y: normalizedDirection.y * force
+      y: normalizedDirection.y * force,
     }
   }
 
   /**
    * Calculates force based on magnetic field type
    */
-  private calculateForceByType(distance: number, range: number, currentTime: number): number {
+  private calculateForceByType(
+    distance: number,
+    range: number,
+    currentTime: number
+  ): number {
     const strength = this.getEffectiveStrength()
-    const distanceRatio = 1 - (distance / range)
+    const distanceRatio = 1 - distance / range
 
     switch (this.magneticField.type) {
       case MagnetFieldType.CIRCULAR:
@@ -372,7 +393,11 @@ export class MagnetComponent extends Component {
 
       case MagnetFieldType.REPULSIVE:
         // Negative force (pushes away)
-        return -strength * Math.pow(distanceRatio, this.magneticField.decayRate) * 0.5
+        return (
+          -strength *
+          Math.pow(distanceRatio, this.magneticField.decayRate) *
+          0.5
+        )
 
       case MagnetFieldType.SELECTIVE:
         // Standard force for selective magnetism
@@ -398,7 +423,10 @@ export class MagnetComponent extends Component {
     }
 
     // Check if pulse should end
-    if (this.isPulsing && currentTime - this.lastPulseTime >= this.pulseDuration) {
+    if (
+      this.isPulsing &&
+      currentTime - this.lastPulseTime >= this.pulseDuration
+    ) {
       this.isPulsing = false
     }
   }
@@ -421,17 +449,24 @@ export class MagnetComponent extends Component {
   /**
    * Records item collection for statistics
    */
-  recordItemCollection(itemValue: number, collectionTime: number, _currentTime: number): void {
+  recordItemCollection(
+    itemValue: number,
+    collectionTime: number,
+    _currentTime: number
+  ): void {
     this.stats.totalItemsCollected++
-    
+
     // Update most valuable item
     if (itemValue > this.stats.mostValuableItemCollected) {
       this.stats.mostValuableItemCollected = itemValue
     }
 
     // Update average collection time
-    const totalTime = this.stats.averageCollectionTime * (this.stats.totalItemsCollected - 1) + collectionTime
-    this.stats.averageCollectionTime = totalTime / this.stats.totalItemsCollected
+    const totalTime =
+      this.stats.averageCollectionTime * (this.stats.totalItemsCollected - 1) +
+      collectionTime
+    this.stats.averageCollectionTime =
+      totalTime / this.stats.totalItemsCollected
   }
 
   /**
@@ -444,8 +479,14 @@ export class MagnetComponent extends Component {
     currentTime: number = Date.now()
   ): void {
     this.temporaryRangeBonus = Math.max(this.temporaryRangeBonus, rangeBonus)
-    this.temporaryStrengthBonus = Math.max(this.temporaryStrengthBonus, strengthBonus)
-    this.bonusExpirationTime = Math.max(this.bonusExpirationTime, currentTime + duration)
+    this.temporaryStrengthBonus = Math.max(
+      this.temporaryStrengthBonus,
+      strengthBonus
+    )
+    this.bonusExpirationTime = Math.max(
+      this.bonusExpirationTime,
+      currentTime + duration
+    )
   }
 
   /**
@@ -504,51 +545,54 @@ export class MagnetComponent extends Component {
       temporaryBonuses: {
         range: this.temporaryRangeBonus,
         strength: this.temporaryStrengthBonus,
-        timeRemaining: Math.max(0, this.bonusExpirationTime - Date.now())
-      }
+        timeRemaining: Math.max(0, this.bonusExpirationTime - Date.now()),
+      },
     }
   }
 
   clone(): MagnetComponent {
-    const clone = new MagnetComponent(this.magneticField.range, this.magneticField.strength)
-    
+    const clone = new MagnetComponent(
+      this.magneticField.range,
+      this.magneticField.strength
+    )
+
     clone.active = this.active
     clone.magneticField = { ...this.magneticField }
-    
+
     clone.trigger = this.trigger
     clone.manuallyActivated = this.manuallyActivated
     clone.activationDuration = this.activationDuration
     clone.activationCooldown = this.activationCooldown
     clone.lastActivationTime = this.lastActivationTime
-    
-    clone.collectionFilters = this.collectionFilters.map(f => ({ ...f }))
+
+    clone.collectionFilters = this.collectionFilters.map((f) => ({ ...f }))
     clone.attractedItems = new Set(this.attractedItems)
     clone.blacklistedItems = new Set(this.blacklistedItems)
-    
+
     clone.rangeMultiplier = this.rangeMultiplier
     clone.strengthMultiplier = this.strengthMultiplier
     clone.efficiencyBonus = this.efficiencyBonus
     clone.experienceBonus = this.experienceBonus
     clone.currencyBonus = this.currencyBonus
-    
+
     clone.pulseInterval = this.pulseInterval
     clone.pulseStrength = this.pulseStrength
     clone.pulseDuration = this.pulseDuration
     clone.lastPulseTime = this.lastPulseTime
     clone.isPulsing = this.isPulsing
-    
+
     clone.visualEffect = this.visualEffect
     clone.pulseEffect = this.pulseEffect
     clone.collectEffect = this.collectEffect
     clone.soundEnabled = this.soundEnabled
-    
+
     clone.updateInterval = this.updateInterval
     clone.lastUpdateTime = this.lastUpdateTime
     clone.maxUpdatesPerFrame = this.maxUpdatesPerFrame
     clone.currentUpdates = this.currentUpdates
-    
+
     clone.stats = { ...this.stats }
-    
+
     clone.temporaryRangeBonus = this.temporaryRangeBonus
     clone.temporaryStrengthBonus = this.temporaryStrengthBonus
     clone.bonusExpirationTime = this.bonusExpirationTime
@@ -560,85 +604,85 @@ export class MagnetComponent extends Component {
     return {
       active: this.active,
       magneticField: this.magneticField,
-      
+
       trigger: this.trigger,
       manuallyActivated: this.manuallyActivated,
       activationDuration: this.activationDuration,
       activationCooldown: this.activationCooldown,
       lastActivationTime: this.lastActivationTime,
-      
+
       collectionFilters: this.collectionFilters,
       attractedItems: Array.from(this.attractedItems),
       blacklistedItems: Array.from(this.blacklistedItems),
-      
+
       rangeMultiplier: this.rangeMultiplier,
       strengthMultiplier: this.strengthMultiplier,
       efficiencyBonus: this.efficiencyBonus,
       experienceBonus: this.experienceBonus,
       currencyBonus: this.currencyBonus,
-      
+
       pulseInterval: this.pulseInterval,
       pulseStrength: this.pulseStrength,
       pulseDuration: this.pulseDuration,
       lastPulseTime: this.lastPulseTime,
       isPulsing: this.isPulsing,
-      
+
       visualEffect: this.visualEffect,
       pulseEffect: this.pulseEffect,
       collectEffect: this.collectEffect,
       soundEnabled: this.soundEnabled,
-      
+
       updateInterval: this.updateInterval,
       lastUpdateTime: this.lastUpdateTime,
       maxUpdatesPerFrame: this.maxUpdatesPerFrame,
       currentUpdates: this.currentUpdates,
-      
+
       stats: this.stats,
-      
+
       temporaryRangeBonus: this.temporaryRangeBonus,
       temporaryStrengthBonus: this.temporaryStrengthBonus,
-      bonusExpirationTime: this.bonusExpirationTime
+      bonusExpirationTime: this.bonusExpirationTime,
     }
   }
 
   deserialize(data: Record<string, unknown>): void {
     this.active = data.active as boolean
     this.magneticField = data.magneticField as MagneticField
-    
+
     this.trigger = data.trigger as MagnetTrigger
     this.manuallyActivated = data.manuallyActivated as boolean
     this.activationDuration = data.activationDuration as number
     this.activationCooldown = data.activationCooldown as number
     this.lastActivationTime = data.lastActivationTime as number
-    
+
     this.collectionFilters = data.collectionFilters as CollectionFilter[]
     this.attractedItems = new Set(data.attractedItems as EntityId[])
     this.blacklistedItems = new Set(data.blacklistedItems as EntityId[])
-    
+
     this.rangeMultiplier = data.rangeMultiplier as number
     this.strengthMultiplier = data.strengthMultiplier as number
     this.efficiencyBonus = data.efficiencyBonus as number
     this.experienceBonus = data.experienceBonus as number
     this.currencyBonus = data.currencyBonus as number
-    
+
     this.pulseInterval = data.pulseInterval as number
     this.pulseStrength = data.pulseStrength as number
     this.pulseDuration = data.pulseDuration as number
     this.lastPulseTime = data.lastPulseTime as number
     this.isPulsing = data.isPulsing as boolean
-    
+
     this.visualEffect = data.visualEffect as string
     this.pulseEffect = data.pulseEffect as string
     this.collectEffect = data.collectEffect as string
     this.soundEnabled = data.soundEnabled as boolean
-    
+
     this.updateInterval = data.updateInterval as number
     this.lastUpdateTime = data.lastUpdateTime as number
     this.maxUpdatesPerFrame = data.maxUpdatesPerFrame as number
     this.currentUpdates = data.currentUpdates as number
-    
+
     this.stats = data.stats as MagnetStats
-    
+
     this.temporaryRangeBonus = data.temporaryRangeBonus as number
     this.temporaryStrengthBonus = data.temporaryStrengthBonus as number
     this.bonusExpirationTime = data.bonusExpirationTime as number

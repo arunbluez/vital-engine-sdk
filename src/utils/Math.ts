@@ -95,9 +95,7 @@ export class Vector2Math {
   }
 
   static equals(a: Vector2, b: Vector2, epsilon: number = 0.0001): boolean {
-    return (
-      Math.abs(a.x - b.x) < epsilon && Math.abs(a.y - b.y) < epsilon
-    )
+    return Math.abs(a.x - b.x) < epsilon && Math.abs(a.y - b.y) < epsilon
   }
 }
 
@@ -173,9 +171,7 @@ export class CollisionDetection {
       return null
     }
 
-    const direction = Vector2Math.normalize(
-      Vector2Math.subtract(b, a)
-    )
+    const direction = Vector2Math.normalize(Vector2Math.subtract(b, a))
     const overlap = radiusSum - distance
 
     return Vector2Math.multiply(direction, overlap)

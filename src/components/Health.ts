@@ -5,7 +5,7 @@ import { Component } from '../core/ECS/Component'
  */
 export class HealthComponent extends Component {
   readonly type = 'health'
-  
+
   current: number
   maximum: number
   regeneration: number
@@ -97,7 +97,11 @@ export class HealthComponent extends Component {
   }
 
   clone(): Component {
-    const clone = new HealthComponent(this.maximum, this.current, this.regeneration)
+    const clone = new HealthComponent(
+      this.maximum,
+      this.current,
+      this.regeneration
+    )
     clone.lastDamageTime = this.lastDamageTime
     return clone
   }
@@ -112,10 +116,12 @@ export class HealthComponent extends Component {
   }
 
   deserialize(data: Record<string, unknown>): void {
-    this.current = data.current !== undefined ? data.current as number : 100
-    this.maximum = data.maximum !== undefined ? data.maximum as number : 100
-    this.regeneration = data.regeneration !== undefined ? data.regeneration as number : 0
-    this.lastDamageTime = data.lastDamageTime !== undefined ? data.lastDamageTime as number : 0
+    this.current = data.current !== undefined ? (data.current as number) : 100
+    this.maximum = data.maximum !== undefined ? (data.maximum as number) : 100
+    this.regeneration =
+      data.regeneration !== undefined ? (data.regeneration as number) : 0
+    this.lastDamageTime =
+      data.lastDamageTime !== undefined ? (data.lastDamageTime as number) : 0
   }
 
   reset(): void {

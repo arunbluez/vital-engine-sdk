@@ -59,11 +59,13 @@ describe('SimpleCollectionSystem', () => {
       simpleCollectionSystem.update(context, []);
 
       expect(world.removeEntity).toHaveBeenCalledWith(collectible.id);
-      expect(collectionSpy).toHaveBeenCalledWith({
-        collectorId: collector.id,
-        collectibleId: collectible.id,
-        timestamp: expect.any(Number)
-      });
+      expect(collectionSpy).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          collectorId: collector.id,
+          collectibleId: collectible.id,
+          timestamp: expect.any(Number)
+        })
+      }));
     });
 
     it('should not collect items outside radius', () => {
@@ -138,11 +140,11 @@ describe('SimpleCollectionSystem', () => {
       simpleCollectionSystem.update(context1, []);
       const movement1 = 60 - collectibleTransform.position.x;
 
-      // Move closer and update again
-      collectibleTransform.setPosition(30, 0);
+      // Move closer and update again (but not within collection radius of 30)
+      collectibleTransform.setPosition(40, 0);
       const context2 = { deltaTime: 16, totalTime: 32, frameCount: 2 };
       simpleCollectionSystem.update(context2, []);
-      const movement2 = 30 - collectibleTransform.position.x;
+      const movement2 = 40 - collectibleTransform.position.x;
 
       // Closer items should experience stronger attraction
       expect(movement2).toBeGreaterThan(movement1);

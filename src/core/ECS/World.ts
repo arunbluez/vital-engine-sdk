@@ -32,14 +32,14 @@ export class World {
       create: () => new Entity(),
       reset: (entity: Entity) => {
         entity.reset()
-      }
+      },
     }
 
     this.entityPool = new ObjectPool(entityFactory, {
       initialSize: 100,
       maxSize: 10000,
       autoResize: true,
-      enableMetrics: true
+      enableMetrics: true,
     })
   }
 
@@ -49,7 +49,7 @@ export class World {
   createEntity(): Entity {
     // Get entity from pool
     const entity = this.entityPool.acquire()
-    
+
     // Assign ID (reuse recycled ID if available)
     if (this.recycledIds.length > 0) {
       const recycledId = this.recycledIds.pop()!
@@ -57,7 +57,7 @@ export class World {
     } else {
       entity.setId(Entity.generateId())
     }
-    
+
     this.entities.set(entity.id, entity)
     return entity
   }
@@ -78,12 +78,19 @@ export class World {
 
     // Remove from world
     this.entities.delete(entityId)
-    
+
     // Recycle the entity ID
     this.recycledIds.push(entityId)
-    
+
     // Return entity to pool
     this.entityPool.release(entity)
+  }
+
+  /**
+   * Removes an entity from the world (alias for destroyEntity)
+   */
+  removeEntity(entityId: EntityId): void {
+    this.destroyEntity(entityId)
   }
 
   /**
@@ -180,9 +187,9 @@ export class World {
       }
 
       globalProfiler.beginMark(`system.${system.name}`, {
-        entityCount: this.entities.size
+        entityCount: this.entities.size,
       })
-      
+
       const startTime = performance.now()
       const entities = this.getEntitiesForSystem(system)
 
@@ -190,7 +197,7 @@ export class World {
 
       const updateTime = performance.now() - startTime
       system.updateMetrics(entities.length, updateTime)
-      
+
       globalProfiler.endMark(`system.${system.name}`)
     })
   }

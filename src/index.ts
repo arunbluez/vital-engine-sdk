@@ -153,10 +153,7 @@ export type {
 export { GameEventType } from './types'
 
 // Export additional types from systems and components
-export type { 
-  AISystemConfig,
-  SpawnSystemConfig,
-} from './systems'
+export type { AISystemConfig, SpawnSystemConfig } from './systems'
 
 export type {
   StateTransition,

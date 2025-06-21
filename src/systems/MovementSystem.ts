@@ -1,8 +1,8 @@
 import { System } from '../core/ECS/System'
-import type { 
-  EntityQuery, 
-  SystemUpdateContext, 
-  ComponentType 
+import type {
+  EntityQuery,
+  SystemUpdateContext,
+  ComponentType,
 } from '../types/CoreTypes'
 import type { TransformComponent } from '../components/Transform'
 import type { MovementComponent } from '../components/Movement'
@@ -28,12 +28,12 @@ export class MovementSystem extends System {
   constructor(eventSystem?: any) {
     super()
     this.eventSystem = eventSystem
-    
+
     // Configure batch processing for better performance
     this.batchConfig = {
       batchSize: 200, // Process 200 entities per batch
       maxBatchTime: 1.5, // Max 1.5ms per batch
-      enableParallelProcessing: false
+      enableParallelProcessing: false,
     }
   }
 
@@ -48,7 +48,12 @@ export class MovementSystem extends System {
         const components = entity.components as any
         const transform = components.transform as TransformComponent
         const movement = components.movement as MovementComponent
-        
+
+        // Skip entities that don't have required components
+        if (!transform || !movement) {
+          return
+        }
+
         this.updateMovement(transform, movement, deltaSeconds, entity.id)
       })
     }
@@ -57,7 +62,10 @@ export class MovementSystem extends System {
   /**
    * Batch update implementation for processing entities in batches
    */
-  protected updateBatch(context: SystemUpdateContext, batch: EntityQuery[]): void {
+  protected updateBatch(
+    context: SystemUpdateContext,
+    batch: EntityQuery[]
+  ): void {
     const deltaSeconds = context.deltaTime / 1000
 
     // Process batch of entities
@@ -65,7 +73,12 @@ export class MovementSystem extends System {
       const components = entity.components as any
       const transform = components.transform as TransformComponent
       const movement = components.movement as MovementComponent
-      
+
+      // Skip entities that don't have required components
+      if (!transform || !movement) {
+        return
+      }
+
       this.updateMovement(transform, movement, deltaSeconds, entity.id)
     })
   }
@@ -106,7 +119,10 @@ export class MovementSystem extends System {
     movement.acceleration.y = 0
 
     // Emit position changed event if position actually changed
-    if (this.eventSystem && !Vector2Math.equals(previousPosition, transform.position)) {
+    if (
+      this.eventSystem &&
+      !Vector2Math.equals(previousPosition, transform.position)
+    ) {
       this.eventSystem.emit(GameEventType.POSITION_CHANGED, {
         entityId,
         previousPosition,
@@ -118,26 +134,43 @@ export class MovementSystem extends System {
   /**
    * Applies a force to an entity with movement component
    */
-  applyForce(entity: MovementEntityQuery, forceX: number, forceY: number): void {
+  applyForce(
+    entity: MovementEntityQuery,
+    forceX: number,
+    forceY: number
+  ): void {
     entity.components.movement.applyForce(forceX, forceY)
   }
 
   /**
    * Applies an impulse to an entity with movement component
    */
-  applyImpulse(entity: MovementEntityQuery, impulseX: number, impulseY: number): void {
+  applyImpulse(
+    entity: MovementEntityQuery,
+    impulseX: number,
+    impulseY: number
+  ): void {
     entity.components.movement.applyImpulse(impulseX, impulseY)
   }
 
   /**
    * Sets the velocity of an entity
    */
-  setVelocity(entity: MovementEntityQuery, velocityX: number, velocityY: number): void {
-    const previousVelocity = Vector2Math.clone(entity.components.movement.velocity)
+  setVelocity(
+    entity: MovementEntityQuery,
+    velocityX: number,
+    velocityY: number
+  ): void {
+    const previousVelocity = Vector2Math.clone(
+      entity.components.movement.velocity
+    )
     entity.components.movement.setVelocity(velocityX, velocityY)
 
     // Emit velocity changed event
-    if (this.eventSystem && !Vector2Math.equals(previousVelocity, entity.components.movement.velocity)) {
+    if (
+      this.eventSystem &&
+      !Vector2Math.equals(previousVelocity, entity.components.movement.velocity)
+    ) {
       this.eventSystem.emit(GameEventType.VELOCITY_CHANGED, {
         entityId: entity.id,
         previousVelocity,
@@ -150,9 +183,9 @@ export class MovementSystem extends System {
    * Moves an entity towards a target position
    */
   moveTowards(
-    entity: MovementEntityQuery, 
-    targetX: number, 
-    targetY: number, 
+    entity: MovementEntityQuery,
+    targetX: number,
+    targetY: number,
     force: number
   ): void {
     const transform = entity.components.transform
@@ -174,10 +207,13 @@ export class MovementSystem extends System {
   /**
    * Gets the distance an entity will travel in the next frame
    */
-  predictNextPosition(entity: MovementEntityQuery, deltaTime: number): { x: number; y: number } {
+  predictNextPosition(
+    entity: MovementEntityQuery,
+    deltaTime: number
+  ): { x: number; y: number } {
     const movement = entity.components.movement
     const transform = entity.components.transform
-    
+
     return {
       x: transform.position.x + movement.velocity.x * deltaTime,
       y: transform.position.y + movement.velocity.y * deltaTime,

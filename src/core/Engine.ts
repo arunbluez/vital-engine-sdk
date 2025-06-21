@@ -33,7 +33,7 @@ export class Engine {
       targetFPS: config.engine?.targetFPS ?? 60,
       minFPS: 30,
       maxFrameTime: 33.33,
-      adjustmentInterval: 5000
+      adjustmentInterval: 5000,
     })
 
     // Apply default engine configuration
@@ -69,7 +69,7 @@ export class Engine {
     globalMemoryManager.setConfig({
       enabled: true,
       minInterval: 30000,
-      memoryThreshold: 100 * 1024 * 1024
+      memoryThreshold: 100 * 1024 * 1024,
     })
 
     // Configure profiler for debug mode
@@ -77,7 +77,7 @@ export class Engine {
       globalProfiler.setConfig({
         enabled: true,
         autoReport: true,
-        reportInterval: 60000
+        reportInterval: 60000,
       })
     }
   }
@@ -140,10 +140,18 @@ export class Engine {
     this.state.running = false
 
     if (this.animationFrameId !== null) {
-      if (typeof (globalThis as unknown as { cancelAnimationFrame?: (id: number) => void }).cancelAnimationFrame !== 'undefined') {
-        (globalThis as unknown as { cancelAnimationFrame: (id: number) => void }).cancelAnimationFrame(
-          this.animationFrameId as number
-        )
+      if (
+        typeof (
+          globalThis as unknown as {
+            cancelAnimationFrame?: (id: number) => void
+          }
+        ).cancelAnimationFrame !== 'undefined'
+      ) {
+        ;(
+          globalThis as unknown as {
+            cancelAnimationFrame: (id: number) => void
+          }
+        ).cancelAnimationFrame(this.animationFrameId as number)
       } else {
         clearTimeout(this.animationFrameId as NodeJS.Timeout)
       }
@@ -229,8 +237,15 @@ export class Engine {
 
     // Update performance metrics
     const worldStats = this.world.getStats()
-    this.performanceMonitor.updateEntityStats(worldStats.entityCount, worldStats.componentCount)
-    this.performanceMonitor.recordSystemUpdate('world', updateTime, worldStats.entityCount)
+    this.performanceMonitor.updateEntityStats(
+      worldStats.entityCount,
+      worldStats.componentCount
+    )
+    this.performanceMonitor.recordSystemUpdate(
+      'world',
+      updateTime,
+      worldStats.entityCount
+    )
 
     // Call update callbacks
     globalProfiler.beginMark('callbacks')
@@ -253,7 +268,7 @@ export class Engine {
       this.eventSystem.emit(GameEventType.PERFORMANCE_WARNING, {
         type: 'entity_limit_exceeded',
         limit: qualitySettings.maxEntities,
-        current: worldStats.entityCount
+        current: worldStats.entityCount,
       })
     }
   }
@@ -294,7 +309,7 @@ export class Engine {
   destroy(): void {
     this.stop()
     this.reset()
-    
+
     // Clean up memory management
     globalMemoryManager.destroy()
   }
@@ -318,7 +333,7 @@ export class Engine {
       worldStats: this.world.getStats(),
       eventStats: this.eventSystem.getStats(),
       performanceMetrics,
-      qualitySettings: this.performanceMonitor.getQualitySettings()
+      qualitySettings: this.performanceMonitor.getQualitySettings(),
     }
   }
 
@@ -347,10 +362,18 @@ export class Engine {
         return
       }
 
-      if (typeof (globalThis as unknown as { requestAnimationFrame?: (callback: (time: number) => void) => number }).requestAnimationFrame !== 'undefined') {
-        this.animationFrameId = (globalThis as unknown as { requestAnimationFrame: (callback: (time: number) => void) => number }).requestAnimationFrame(
-          gameLoop
-        )
+      if (
+        typeof (
+          globalThis as unknown as {
+            requestAnimationFrame?: (callback: (time: number) => void) => number
+          }
+        ).requestAnimationFrame !== 'undefined'
+      ) {
+        this.animationFrameId = (
+          globalThis as unknown as {
+            requestAnimationFrame: (callback: (time: number) => void) => number
+          }
+        ).requestAnimationFrame(gameLoop)
       } else {
         // Node.js fallback
         const delay = Math.max(0, targetFrameTime - (Date.now() - currentTime))
@@ -385,10 +408,18 @@ export class Engine {
       }
     }
 
-    if (typeof (globalThis as unknown as { requestAnimationFrame?: (callback: (time: number) => void) => number }).requestAnimationFrame !== 'undefined') {
-      this.animationFrameId = (globalThis as unknown as { requestAnimationFrame: (callback: (time: number) => void) => number }).requestAnimationFrame(
-        gameLoop
-      )
+    if (
+      typeof (
+        globalThis as unknown as {
+          requestAnimationFrame?: (callback: (time: number) => void) => number
+        }
+      ).requestAnimationFrame !== 'undefined'
+    ) {
+      this.animationFrameId = (
+        globalThis as unknown as {
+          requestAnimationFrame: (callback: (time: number) => void) => number
+        }
+      ).requestAnimationFrame(gameLoop)
     } else {
       // Start with immediate execution for Node.js
       setImmediate(() => gameLoop(Date.now()))

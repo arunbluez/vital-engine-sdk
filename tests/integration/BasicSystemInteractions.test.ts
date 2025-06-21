@@ -115,7 +115,7 @@ describe('Basic System Integration Tests', () => {
 
   describe('Progression System Integration', () => {
     it('should handle experience gain and level ups', () => {
-      const progressionSystem = new ProgressionSystem(eventSystem);
+      const progressionSystem = new ProgressionSystem(eventSystem, world);
       
       const entity = world.createEntity();
       entity.addComponent(new ExperienceComponent(1)); // Start at level 1
@@ -128,10 +128,7 @@ describe('Basic System Integration Tests', () => {
         levelUpEvents.push(event);
       });
 
-      // Mock the system's method to find entities
-      (progressionSystem as any).getEntitiesWithExperience = jest.fn().mockReturnValue([
-        { id: entity.id, components: { experience: experience } }
-      ]);
+      // No mocking needed since progressionSystem now has access to the world
 
       // Use grantExperience to award XP and trigger level up
       const levelsGained = progressionSystem.grantExperience(entity.id, 300, 'test');
@@ -141,7 +138,7 @@ describe('Basic System Integration Tests', () => {
     });
 
     it('should handle multiple experience components', () => {
-      const progressionSystem = new ProgressionSystem(eventSystem);
+      const progressionSystem = new ProgressionSystem(eventSystem, world);
       const entities: Entity[] = [];
 
       // Create multiple entities with different experience
@@ -333,7 +330,7 @@ describe('Basic System Integration Tests', () => {
     });
 
     it('should handle rapid system updates', () => {
-      const progressionSystem = new ProgressionSystem(eventSystem);
+      const progressionSystem = new ProgressionSystem(eventSystem, world);
       
       const entity = world.createEntity();
       entity.addComponent(new ExperienceComponent());
@@ -389,7 +386,7 @@ describe('Basic System Integration Tests', () => {
 
     it('should handle system updates with empty entity lists', () => {
       const movementSystem = new MovementSystem();
-      const progressionSystem = new ProgressionSystem(eventSystem);
+      const progressionSystem = new ProgressionSystem(eventSystem, world);
 
       const context = { deltaTime: 16, totalTime: 16, frameCount: 1 };
 

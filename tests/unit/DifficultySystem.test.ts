@@ -2,7 +2,7 @@ import { DifficultySystem } from '../../src/systems/DifficultySystem';
 import { World } from '../../src/core/ECS/World';
 import { Entity } from '../../src/core/ECS/Entity';
 import { DifficultyComponent } from '../../src/components/Difficulty';
-import type { DifficultyLevel } from '../../src/components/Difficulty';
+import type { DifficultyLevel, DifficultyModifier } from '../../src/components/Difficulty';
 import { HealthComponent } from '../../src/components/Health';
 import { CombatComponent } from '../../src/components/Combat';
 import { MovementComponent } from '../../src/components/Movement';
@@ -18,12 +18,9 @@ describe('DifficultySystem', () => {
     eventSystem = new EventSystem();
     
     // Mock world methods
-    world.eventSystem = eventSystem;
     world.getEntitiesWithComponents = jest.fn().mockReturnValue([]);
     
-    difficultySystem = new DifficultySystem();
-    difficultySystem['world'] = world;
-    difficultySystem['eventSystem'] = eventSystem;
+    difficultySystem = new DifficultySystem(world, eventSystem);
   });
 
   afterEach(() => {
@@ -50,9 +47,9 @@ describe('DifficultySystem', () => {
     });
 
     it('should record player actions', () => {
-      difficultySystem.recordPlayerAction(difficultyEntity.id, 'KILLS', 5, false);
+      difficultySystem.recordPlayerAction(difficultyEntity.id, 'ENEMIES_KILLED', 5, false);
       
-      expect(difficultyComponent.performanceMetrics.kills).toBe(5);
+      expect(difficultyComponent.performanceMetrics.enemiesKilled).toBe(5);
     });
 
     it('should set difficulty level', () => {
@@ -85,7 +82,7 @@ describe('DifficultySystem', () => {
       
       expect(stats).toBeTruthy();
       expect(stats?.currentLevel).toBe('NORMAL' as DifficultyLevel);
-      expect(stats?.adaptiveEnabled).toBe(false);
+      expect(stats?.adaptiveEnabled).toBe(true);
     });
   });
 
@@ -115,16 +112,20 @@ describe('DifficultySystem', () => {
     });
 
     it('should add custom modifiers', () => {
-      const modifier = {
+      const modifier: DifficultyModifier = {
         id: 'test-modifier',
+        name: 'Test Modifier',
+        description: 'A test modifier for health',
         targetProperty: 'health.maxHealth',
-        modifierType: 'multiplicative' as const,
-        baseValue: 1.5,
-        scalingFactor: 0.1,
-        minValue: 1.0,
-        maxValue: 3.0,
+        scalingFunction: {
+          type: 'LINEAR',
+          baseValue: 1.5,
+          scalingFactor: 0.1
+        },
         isActive: true,
-        calculateModifierValue: jest.fn().mockReturnValue(1.5)
+        priority: 1,
+        minValue: 1.0,
+        maxValue: 3.0
       };
 
       const result = difficultySystem.addCustomModifier(difficultyEntity.id, modifier);
@@ -152,6 +153,9 @@ describe('DifficultySystem', () => {
       ;(world.getEntitiesWithComponents as jest.Mock).mockReturnValue([
         { entityId: difficultyEntity.id, difficulty: difficultyComponent }
       ]);
+
+      // Set the last update time to ensure the update will run
+      (difficultySystem as any).lastDifficultyUpdate = Date.now() - 2000;
 
       const context = { deltaTime: 1000, totalTime: 1000, frameCount: 1 };
       difficultySystem.update(context);

@@ -1,28 +1,28 @@
 export { Vector2Math, CollisionDetection, MathUtils } from './Math'
-export { 
-  ObjectPool, 
-  PoolManager, 
+export {
+  ObjectPool,
+  PoolManager,
   globalPoolManager,
   CommonPools,
   initializeCommonPools,
-  type Poolable, 
+  type Poolable,
   type PoolFactory,
   type PoolStatistics,
-  type PoolConfig
+  type PoolConfig,
 } from './Pooling'
 export {
   BatchProcessor,
   CacheFriendlyBatchProcessor,
   globalBatchProcessor,
   type BatchConfig,
-  type BatchMetrics
+  type BatchMetrics,
 } from './BatchProcessor'
 export {
   SpatialHashGrid,
   QuadTree,
   type SpatialEntity,
   type SpatialQuery,
-  type SpatialPartitionConfig
+  type SpatialPartitionConfig,
 } from './SpatialPartitioning'
 export {
   MemoryManager,
@@ -31,5 +31,5 @@ export {
   globalMemoryManager,
   CommonRecyclers,
   type MemoryStats,
-  type GCConfig
+  type GCConfig,
 } from './MemoryManagement'

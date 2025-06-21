@@ -6,7 +6,7 @@ import type { Vector2 } from '../types/GameTypes'
  */
 export class TransformComponent extends Component {
   readonly type = 'transform'
-  
+
   position: Vector2
   rotation: number
   scale: Vector2
@@ -102,9 +102,9 @@ export class TransformComponent extends Component {
       this.position.x = 0
       this.position.y = 0
     }
-    
+
     this.rotation = (data.rotation as number) ?? 0
-    
+
     if (data.scale) {
       const scale = data.scale as { x: number; y: number }
       this.scale.x = scale.x ?? 1

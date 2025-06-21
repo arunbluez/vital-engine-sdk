@@ -51,7 +51,7 @@ export class PerformanceMonitor {
     memoryUsage: 0,
     entityCount: 0,
     componentCount: 0,
-    systemMetrics: new Map()
+    systemMetrics: new Map(),
   }
 
   private frameTimeHistory: number[] = []
@@ -68,7 +68,7 @@ export class PerformanceMonitor {
     physicsSteps: 1,
     spatialPartitioningEnabled: true,
     batchProcessingEnabled: true,
-    objectPoolingEnabled: true
+    objectPoolingEnabled: true,
   }
 
   private thresholds: PerformanceThresholds = {
@@ -76,7 +76,7 @@ export class PerformanceMonitor {
     minFPS: 30,
     maxFrameTime: 33.33, // 30 FPS
     maxMemoryUsage: 512 * 1024 * 1024, // 512MB
-    adjustmentInterval: 5000 // 5 seconds
+    adjustmentInterval: 5000, // 5 seconds
   }
 
   private lastQualityAdjustment: number = 0
@@ -103,7 +103,7 @@ export class PerformanceMonitor {
 
     const now = performance.now()
     const frameTime = now - this.lastFrameTime
-    
+
     // Update frame time history
     this.frameTimeHistory.push(frameTime)
     if (this.frameTimeHistory.length > this.historySize) {
@@ -122,7 +122,10 @@ export class PerformanceMonitor {
     }
 
     // Check for quality adjustment
-    if (now - this.lastQualityAdjustment >= this.thresholds.adjustmentInterval) {
+    if (
+      now - this.lastQualityAdjustment >=
+      this.thresholds.adjustmentInterval
+    ) {
       this.adjustQuality()
       this.lastQualityAdjustment = now
     }
@@ -131,16 +134,20 @@ export class PerformanceMonitor {
   /**
    * Records system update time
    */
-  recordSystemUpdate(systemName: string, updateTime: number, entityCount: number): void {
+  recordSystemUpdate(
+    systemName: string,
+    updateTime: number,
+    entityCount: number
+  ): void {
     let metrics = this.metrics.systemMetrics.get(systemName)
-    
+
     if (!metrics) {
       metrics = {
         name: systemName,
         updateTime: 0,
         entityCount: 0,
         averageUpdateTime: 0,
-        maxUpdateTime: 0
+        maxUpdateTime: 0,
       }
       this.metrics.systemMetrics.set(systemName, metrics)
     }
@@ -148,10 +155,11 @@ export class PerformanceMonitor {
     metrics.updateTime = updateTime
     metrics.entityCount = entityCount
     metrics.maxUpdateTime = Math.max(metrics.maxUpdateTime, updateTime)
-    
+
     // Update rolling average
     const alpha = 0.1 // Smoothing factor
-    metrics.averageUpdateTime = metrics.averageUpdateTime * (1 - alpha) + updateTime * alpha
+    metrics.averageUpdateTime =
+      metrics.averageUpdateTime * (1 - alpha) + updateTime * alpha
   }
 
   /**
@@ -197,9 +205,12 @@ export class PerformanceMonitor {
     // Adjust settings based on quality level
     this.qualitySettings.maxEntities = Math.floor(10000 * this.qualityLevel)
     this.qualitySettings.maxParticles = Math.floor(1000 * this.qualityLevel)
-    
+
     if (this.qualityLevel < 0.7) {
-      this.qualitySettings.physicsSteps = Math.max(1, Math.floor(2 * this.qualityLevel))
+      this.qualitySettings.physicsSteps = Math.max(
+        1,
+        Math.floor(2 * this.qualityLevel)
+      )
     }
 
     if (this.qualityLevel < 0.5) {
@@ -218,7 +229,7 @@ export class PerformanceMonitor {
     // Adjust settings based on quality level
     this.qualitySettings.maxEntities = Math.floor(10000 * this.qualityLevel)
     this.qualitySettings.maxParticles = Math.floor(1000 * this.qualityLevel)
-    
+
     if (this.qualityLevel >= 0.5) {
       this.qualitySettings.batchProcessingEnabled = true
     }
@@ -290,19 +301,19 @@ export class PerformanceMonitor {
   generateReport(): string {
     const metrics = this.getMetrics()
     const quality = this.getQualitySettings()
-    
+
     let report = 'Performance Report\n'
     report += '==================\n\n'
-    
+
     report += 'Frame Metrics:\n'
     report += `  FPS: ${metrics.fps.toFixed(1)}\n`
     report += `  Frame Time: ${metrics.frameTime.toFixed(2)}ms\n`
     report += `  Average Frame Time: ${this.getAverageFrameTime().toFixed(2)}ms\n\n`
-    
+
     report += 'Entity Metrics:\n'
     report += `  Entity Count: ${metrics.entityCount}\n`
     report += `  Component Count: ${metrics.componentCount}\n\n`
-    
+
     report += 'System Performance:\n'
     metrics.systemMetrics.forEach((system, name) => {
       report += `  ${name}:\n`
@@ -311,7 +322,7 @@ export class PerformanceMonitor {
       report += `    Max: ${system.maxUpdateTime.toFixed(2)}ms\n`
       report += `    Entities: ${system.entityCount}\n`
     })
-    
+
     report += '\nQuality Settings:\n'
     report += `  Quality Level: ${(this.qualityLevel * 100).toFixed(0)}%\n`
     report += `  Max Entities: ${quality.maxEntities}\n`
@@ -320,11 +331,11 @@ export class PerformanceMonitor {
     report += `  Batch Processing: ${quality.batchProcessingEnabled}\n`
     report += `  Spatial Partitioning: ${quality.spatialPartitioningEnabled}\n`
     report += `  Object Pooling: ${quality.objectPoolingEnabled}\n`
-    
+
     if (metrics.memoryUsage > 0) {
       report += `\nMemory Usage: ${(metrics.memoryUsage / 1024 / 1024).toFixed(2)}MB\n`
     }
-    
+
     return report
   }
 

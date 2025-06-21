@@ -16,15 +16,21 @@ export interface WeaponStats {
  */
 export class CombatComponent extends Component {
   readonly type = 'combat'
-  
+
   weapon: WeaponStats
   lastAttackTime: number
   targetId: EntityId | null
   autoAttack: boolean
 
-  constructor(weapon: WeaponStats, autoAttack: boolean = true) {
+  constructor(weapon?: WeaponStats, autoAttack: boolean = true) {
     super()
-    this.weapon = { ...weapon }
+    this.weapon = weapon ? { ...weapon } : {
+      damage: 10,
+      range: 50,
+      attackSpeed: 1,
+      criticalChance: 0.1,
+      criticalMultiplier: 2.0
+    }
     this.lastAttackTime = 0
     this.targetId = null
     this.autoAttack = autoAttack
@@ -120,12 +126,15 @@ export class CombatComponent extends Component {
         projectileSpeed: undefined,
         piercing: undefined,
         criticalChance: undefined,
-        criticalMultiplier: undefined
+        criticalMultiplier: undefined,
       }
     }
-    this.lastAttackTime = data.lastAttackTime !== undefined ? data.lastAttackTime as number : 0
-    this.targetId = data.targetId !== undefined ? data.targetId as EntityId | null : null
-    this.autoAttack = data.autoAttack !== undefined ? data.autoAttack as boolean : true
+    this.lastAttackTime =
+      data.lastAttackTime !== undefined ? (data.lastAttackTime as number) : 0
+    this.targetId =
+      data.targetId !== undefined ? (data.targetId as EntityId | null) : null
+    this.autoAttack =
+      data.autoAttack !== undefined ? (data.autoAttack as boolean) : true
   }
 
   reset(): void {
@@ -136,7 +145,7 @@ export class CombatComponent extends Component {
       projectileSpeed: undefined,
       piercing: undefined,
       criticalChance: undefined,
-      criticalMultiplier: undefined
+      criticalMultiplier: undefined,
     }
     this.lastAttackTime = 0
     this.targetId = null

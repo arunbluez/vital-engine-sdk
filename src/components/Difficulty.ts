@@ -1,8 +1,13 @@
 import { Component } from '../core/ECS/Component'
 
-export type DifficultyLevel = 'EASY' | 'NORMAL' | 'HARD' | 'EXTREME' | 'NIGHTMARE'
+export type DifficultyLevel =
+  | 'EASY'
+  | 'NORMAL'
+  | 'HARD'
+  | 'EXTREME'
+  | 'NIGHTMARE'
 
-export type ScalingMetric = 
+export type ScalingMetric =
   | 'SURVIVAL_TIME'
   | 'PLAYER_LEVEL'
   | 'ENEMIES_KILLED'
@@ -35,7 +40,12 @@ export interface ScalingFunction {
 
 export interface DifficultyCondition {
   readonly metric: ScalingMetric
-  readonly operator: 'GREATER_THAN' | 'LESS_THAN' | 'EQUALS' | 'GREATER_EQUAL' | 'LESS_EQUAL'
+  readonly operator:
+    | 'GREATER_THAN'
+    | 'LESS_THAN'
+    | 'EQUALS'
+    | 'GREATER_EQUAL'
+    | 'LESS_EQUAL'
   readonly value: number
   readonly isInverse?: boolean
 }
@@ -78,11 +88,11 @@ export interface AdaptiveSettings {
 
 export class DifficultyComponent extends Component {
   readonly type = 'difficulty'
-  
+
   public currentLevel: DifficultyLevel = 'NORMAL'
   public currentScore: number = 100
   public targetScore: number = 100
-  
+
   public performanceMetrics: PerformanceMetrics = {
     survivalTime: 0,
     playerLevel: 1,
@@ -95,13 +105,13 @@ export class DifficultyComponent extends Component {
     averageReactionTime: 1000,
     skillActivations: 0,
     deathCount: 0,
-    lastUpdateTime: Date.now()
+    lastUpdateTime: Date.now(),
   }
-  
+
   public difficultyBands: DifficultyBand[] = []
   public activeModifiers: Map<string, DifficultyModifier> = new Map()
   public modifierValues: Map<string, number> = new Map()
-  
+
   public adaptiveSettings: AdaptiveSettings = {
     isEnabled: true,
     adaptationRate: 0.1,
@@ -110,18 +120,18 @@ export class DifficultyComponent extends Component {
     stabilityThreshold: 0.05,
     maxAdjustmentPerInterval: 0.2,
     targetPerformanceRange: { min: 0.6, max: 0.8 },
-    emergencyAdjustmentThreshold: 0.3
+    emergencyAdjustmentThreshold: 0.3,
   }
-  
+
   public performanceHistory: number[] = []
   public lastAdaptationTime: number = Date.now()
   public isStabilized: boolean = false
-  
+
   constructor() {
     super()
     this.initializeDefaultBands()
   }
-  
+
   private initializeDefaultBands(): void {
     this.difficultyBands = [
       {
@@ -137,20 +147,28 @@ export class DifficultyComponent extends Component {
             name: 'Reduced Enemy Health',
             description: 'Enemies have less health',
             targetProperty: 'health.maxHealth',
-            scalingFunction: { type: 'LINEAR', baseValue: 1.0, scalingFactor: -0.3 },
+            scalingFunction: {
+              type: 'LINEAR',
+              baseValue: 1.0,
+              scalingFactor: -0.3,
+            },
             isActive: true,
-            priority: 1
+            priority: 1,
           },
           {
             id: 'easy_spawn_rate',
             name: 'Slower Spawning',
             description: 'Enemies spawn less frequently',
             targetProperty: 'spawner.spawnRate',
-            scalingFunction: { type: 'LINEAR', baseValue: 1.0, scalingFactor: -0.4 },
+            scalingFunction: {
+              type: 'LINEAR',
+              baseValue: 1.0,
+              scalingFactor: -0.4,
+            },
             isActive: true,
-            priority: 1
-          }
-        ]
+            priority: 1,
+          },
+        ],
       },
       {
         level: 'NORMAL',
@@ -159,7 +177,7 @@ export class DifficultyComponent extends Component {
         name: 'Balanced',
         description: 'Standard difficulty for most players',
         transitionThreshold: 25,
-        modifiers: []
+        modifiers: [],
       },
       {
         level: 'HARD',
@@ -174,20 +192,29 @@ export class DifficultyComponent extends Component {
             name: 'Increased Enemy Damage',
             description: 'Enemies deal more damage',
             targetProperty: 'combat.damage',
-            scalingFunction: { type: 'LINEAR', baseValue: 1.0, scalingFactor: 0.3 },
+            scalingFunction: {
+              type: 'LINEAR',
+              baseValue: 1.0,
+              scalingFactor: 0.3,
+            },
             isActive: true,
-            priority: 1
+            priority: 1,
           },
           {
             id: 'hard_spawn_variety',
             name: 'More Enemy Types',
             description: 'Greater variety of enemy types',
             targetProperty: 'spawner.enemyVariety',
-            scalingFunction: { type: 'STEP', baseValue: 1.0, scalingFactor: 1.5, stepSize: 0.5 },
+            scalingFunction: {
+              type: 'STEP',
+              baseValue: 1.0,
+              scalingFactor: 1.5,
+              stepSize: 0.5,
+            },
             isActive: true,
-            priority: 2
-          }
-        ]
+            priority: 2,
+          },
+        ],
       },
       {
         level: 'EXTREME',
@@ -202,20 +229,28 @@ export class DifficultyComponent extends Component {
             name: 'Faster Enemies',
             description: 'Enemies move significantly faster',
             targetProperty: 'movement.speed',
-            scalingFunction: { type: 'EXPONENTIAL', baseValue: 1.0, scalingFactor: 0.5 },
+            scalingFunction: {
+              type: 'EXPONENTIAL',
+              baseValue: 1.0,
+              scalingFactor: 0.5,
+            },
             isActive: true,
-            priority: 1
+            priority: 1,
           },
           {
             id: 'extreme_ai_aggression',
             name: 'Aggressive AI',
             description: 'Enemy AI is more aggressive',
             targetProperty: 'enemyAI.aggressionLevel',
-            scalingFunction: { type: 'LINEAR', baseValue: 1.0, scalingFactor: 0.6 },
+            scalingFunction: {
+              type: 'LINEAR',
+              baseValue: 1.0,
+              scalingFactor: 0.6,
+            },
             isActive: true,
-            priority: 1
-          }
-        ]
+            priority: 1,
+          },
+        ],
       },
       {
         level: 'NIGHTMARE',
@@ -230,35 +265,43 @@ export class DifficultyComponent extends Component {
             name: 'Enhanced Everything',
             description: 'All enemy stats significantly boosted',
             targetProperty: 'all',
-            scalingFunction: { type: 'EXPONENTIAL', baseValue: 1.0, scalingFactor: 0.8 },
+            scalingFunction: {
+              type: 'EXPONENTIAL',
+              baseValue: 1.0,
+              scalingFactor: 0.8,
+            },
             isActive: true,
-            priority: 1
+            priority: 1,
           },
           {
             id: 'nightmare_boss_frequency',
             name: 'Frequent Bosses',
             description: 'Boss enemies appear much more often',
             targetProperty: 'spawner.bossFrequency',
-            scalingFunction: { type: 'LINEAR', baseValue: 1.0, scalingFactor: 3.0 },
+            scalingFunction: {
+              type: 'LINEAR',
+              baseValue: 1.0,
+              scalingFactor: 3.0,
+            },
             isActive: true,
-            priority: 2
-          }
-        ]
-      }
+            priority: 2,
+          },
+        ],
+      },
     ]
   }
-  
+
   public updatePerformanceMetrics(
     metric: ScalingMetric,
     value: number,
     isIncrement: boolean = false
   ): void {
     const currentTime = Date.now()
-    
+
     switch (metric) {
       case 'SURVIVAL_TIME':
-        this.performanceMetrics.survivalTime = isIncrement 
-          ? this.performanceMetrics.survivalTime + value 
+        this.performanceMetrics.survivalTime = isIncrement
+          ? this.performanceMetrics.survivalTime + value
           : value
         break
       case 'PLAYER_LEVEL':
@@ -286,16 +329,16 @@ export class DifficultyComponent extends Component {
         this.performanceMetrics.collectionRate = value
         break
     }
-    
+
     this.performanceMetrics.lastUpdateTime = currentTime
   }
-  
+
   public calculateCurrentScore(): number {
     const metrics = this.performanceMetrics
     const timeInMinutes = Math.max(metrics.survivalTime / 60000, 1)
-    
+
     let score = 100
-    
+
     score += (metrics.enemiesKilled / timeInMinutes) * 10
     score += metrics.playerLevel * 15
     score += (metrics.damageDealt / timeInMinutes) * 0.01
@@ -303,85 +346,101 @@ export class DifficultyComponent extends Component {
     score += metrics.accuracy * 50
     score += metrics.collectionRate * 20
     score -= metrics.deathCount * 25
-    
+
     if (metrics.averageReactionTime < 500) score += 20
     else if (metrics.averageReactionTime > 2000) score -= 20
-    
+
     return Math.max(score, 0)
   }
-  
+
   public getDifficultyBandForScore(score: number): DifficultyBand | null {
-    return this.difficultyBands.find(band => 
-      score >= band.minScore && score <= band.maxScore
-    ) || null
+    return (
+      this.difficultyBands.find(
+        (band) => score >= band.minScore && score <= band.maxScore
+      ) || null
+    )
   }
-  
-  public shouldTransitionDifficulty(newScore: number): { 
+
+  public shouldTransitionDifficulty(newScore: number): {
     shouldTransition: boolean
     newLevel?: DifficultyLevel
-    confidence: number 
+    confidence: number
   } {
     const currentBand = this.getDifficultyBandForScore(this.currentScore)
     const targetBand = this.getDifficultyBandForScore(newScore)
-    
+
     if (!currentBand || !targetBand || currentBand.level === targetBand.level) {
       return { shouldTransition: false, confidence: 0 }
     }
-    
+
     const scoreDifference = Math.abs(newScore - this.currentScore)
-    const confidence = Math.min(scoreDifference / targetBand.transitionThreshold, 1.0)
-    
+    const confidence = Math.min(
+      scoreDifference / targetBand.transitionThreshold,
+      1.0
+    )
+
     const shouldTransition = confidence >= 0.7
-    
+
     return {
       shouldTransition,
       newLevel: shouldTransition ? targetBand.level : undefined,
-      confidence
+      confidence,
     }
   }
-  
-  public calculateModifierValue(modifier: DifficultyModifier, inputValue: number): number {
+
+  public calculateModifierValue(
+    modifier: DifficultyModifier,
+    inputValue: number
+  ): number {
     if (!this.evaluateConditions(modifier.conditions || [])) {
       return inputValue
     }
-    
+
     const scaling = modifier.scalingFunction
     let result: number
-    
+
     switch (scaling.type) {
       case 'LINEAR':
-        result = scaling.baseValue + (inputValue * scaling.scalingFactor)
+        result = scaling.baseValue + inputValue * scaling.scalingFactor
         break
       case 'EXPONENTIAL':
-        result = scaling.baseValue * Math.pow(1 + scaling.scalingFactor, inputValue)
+        result =
+          scaling.baseValue * Math.pow(1 + scaling.scalingFactor, inputValue)
         break
       case 'LOGARITHMIC':
-        result = scaling.baseValue + scaling.scalingFactor * Math.log(inputValue + 1)
+        result =
+          scaling.baseValue + scaling.scalingFactor * Math.log(inputValue + 1)
         break
       case 'STEP':
         const stepLevel = Math.floor(inputValue / (scaling.stepSize || 1))
-        result = scaling.baseValue + (stepLevel * scaling.scalingFactor)
+        result = scaling.baseValue + stepLevel * scaling.scalingFactor
         break
       case 'CUSTOM':
-        result = this.evaluateCustomFormula(scaling.customFormula || '', inputValue, scaling.baseValue)
+        result = this.evaluateCustomFormula(
+          scaling.customFormula || '',
+          inputValue,
+          scaling.baseValue
+        )
         break
       default:
         result = inputValue
     }
-    
-    if (modifier.minValue !== undefined) result = Math.max(result, modifier.minValue)
-    if (modifier.maxValue !== undefined) result = Math.min(result, modifier.maxValue)
-    
+
+    if (modifier.minValue !== undefined)
+      result = Math.max(result, modifier.minValue)
+    if (modifier.maxValue !== undefined)
+      result = Math.min(result, modifier.maxValue)
+
     return result
   }
-  
+
   private evaluateConditions(conditions: DifficultyCondition[]): boolean {
     if (conditions.length === 0) return true
-    
-    return conditions.every(condition => {
+
+    return conditions.every((condition) => {
       const metricValue = this.getMetricValue(condition.metric)
       let passes = false
-      
+
       switch (condition.operator) {
         case 'GREATER_THAN':
           passes = metricValue > condition.value
@@ -399,49 +458,66 @@ export class DifficultyComponent extends Component {
           passes = metricValue <= condition.value
           break
       }
-      
+
       return condition.isInverse ? !passes : passes
     })
   }
-  
+
   private getMetricValue(metric: ScalingMetric): number {
     switch (metric) {
-      case 'SURVIVAL_TIME': return this.performanceMetrics.survivalTime
-      case 'PLAYER_LEVEL': return this.performanceMetrics.playerLevel
-      case 'ENEMIES_KILLED': return this.performanceMetrics.enemiesKilled
-      case 'DAMAGE_DEALT': return this.performanceMetrics.damageDealt
-      case 'DAMAGE_TAKEN': return this.performanceMetrics.damageTaken
-      case 'SCORE': return this.performanceMetrics.score
-      case 'COLLECTION_RATE': return this.performanceMetrics.collectionRate
-      default: return 0
+      case 'SURVIVAL_TIME':
+        return this.performanceMetrics.survivalTime
+      case 'PLAYER_LEVEL':
+        return this.performanceMetrics.playerLevel
+      case 'ENEMIES_KILLED':
+        return this.performanceMetrics.enemiesKilled
+      case 'DAMAGE_DEALT':
+        return this.performanceMetrics.damageDealt
+      case 'DAMAGE_TAKEN':
+        return this.performanceMetrics.damageTaken
+      case 'SCORE':
+        return this.performanceMetrics.score
+      case 'COLLECTION_RATE':
+        return this.performanceMetrics.collectionRate
+      default:
+        return 0
     }
   }
-  
-  private evaluateCustomFormula(formula: string, input: number, base: number): number {
+
+  private evaluateCustomFormula(
+    formula: string,
+    input: number,
+    base: number
+  ): number {
     try {
       const sanitizedFormula = formula
         .replace(/input/g, input.toString())
         .replace(/base/g, base.toString())
         .replace(/[^0-9+\-*/().]/g, '')
-      
+
       return Function(`"use strict"; return (${sanitizedFormula})`)()
     } catch {
       return input
     }
   }
-  
+
   public getPerformanceScore(): number {
-    const timeInMinutes = Math.max(this.performanceMetrics.survivalTime / 60000, 1)
+    const timeInMinutes = Math.max(
+      this.performanceMetrics.survivalTime / 60000,
+      1
+    )
     const killRate = this.performanceMetrics.enemiesKilled / timeInMinutes
-    const efficiency = this.performanceMetrics.damageDealt / Math.max(this.performanceMetrics.damageTaken, 1)
-    
+    const efficiency =
+      this.performanceMetrics.damageDealt /
+      Math.max(this.performanceMetrics.damageTaken, 1)
+
     const normalizedKillRate = Math.min(killRate / 10, 1.0)
     const normalizedEfficiency = Math.min(efficiency / 5, 1.0)
     const normalizedAccuracy = this.performanceMetrics.accuracy
-    
+
     return (normalizedKillRate + normalizedEfficiency + normalizedAccuracy) / 3
   }
-  
+
   public clone(): DifficultyComponent {
     const cloned = new DifficultyComponent()
     cloned.currentLevel = this.currentLevel
@@ -457,7 +533,7 @@ export class DifficultyComponent extends Component {
     cloned.isStabilized = this.isStabilized
     return cloned
   }
-  
+
   public serialize(): Record<string, unknown> {
     return {
       type: this.type,
@@ -468,16 +544,18 @@ export class DifficultyComponent extends Component {
       adaptiveSettings: this.adaptiveSettings,
       performanceHistory: this.performanceHistory,
       lastAdaptationTime: this.lastAdaptationTime,
-      isStabilized: this.isStabilized
+      isStabilized: this.isStabilized,
     }
   }
-  
+
   public deserialize(data: Record<string, unknown>): void {
     this.currentLevel = (data.currentLevel as DifficultyLevel) || 'NORMAL'
     this.currentScore = (data.currentScore as number) || 100
     this.targetScore = (data.targetScore as number) || 100
-    this.performanceMetrics = (data.performanceMetrics as PerformanceMetrics) || this.performanceMetrics
-    this.adaptiveSettings = (data.adaptiveSettings as AdaptiveSettings) || this.adaptiveSettings
+    this.performanceMetrics =
+      (data.performanceMetrics as PerformanceMetrics) || this.performanceMetrics
+    this.adaptiveSettings =
+      (data.adaptiveSettings as AdaptiveSettings) || this.adaptiveSettings
     this.performanceHistory = (data.performanceHistory as number[]) || []
     this.lastAdaptationTime = (data.lastAdaptationTime as number) || Date.now()
     this.isStabilized = (data.isStabilized as boolean) || false
