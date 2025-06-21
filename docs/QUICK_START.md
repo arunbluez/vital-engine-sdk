@@ -11,19 +11,19 @@ npm install vital-engine-sdk
 ## 2. Basic Usage
 
 ```javascript
-import { 
+import {
   Engine,
   TransformComponent,
   HealthComponent,
-  MovementComponent
+  MovementComponent,
 } from 'vital-engine-sdk'
 
 // Create engine
 const engine = new Engine({
   engine: {
     targetFPS: 60,
-    fixedTimeStep: false
-  }
+    fixedTimeStep: false,
+  },
 })
 
 const world = engine.getWorld()
@@ -37,11 +37,11 @@ player.addComponent(new MovementComponent(150))
 // Game loop
 function gameLoop() {
   world.update(16.67) // ~60 FPS
-  
+
   // Get all entities
   const entities = world.getActiveEntities()
   console.log(`Active entities: ${entities.length}`)
-  
+
   requestAnimationFrame(gameLoop)
 }
 
@@ -89,25 +89,27 @@ events.on('ENTITY_KILLED', (event) => {
 ### Performance
 
 The SDK is designed for high performance:
+
 - ✅ 1000+ entities at 60 FPS
 - ✅ 11.6ms average frame time
 - ✅ Efficient entity creation/destruction
 
-## 5. Next Steps
-
-- **Full Documentation**: See `docs/FRONTEND_INTEGRATION.md`
-- **Architecture Guide**: See `.claude/CLAUDE.md`
-- **Development Plan**: See `.claude/ACTION_PLAN.md`
-- **Testing Strategy**: See `.claude/TESTING.md`
-
-## 6. Example Game Loop with All Systems
+## 5. Example Game Loop with All Systems
 
 ```javascript
 import {
-  Engine, World,
-  TransformComponent, HealthComponent, MovementComponent,
-  CombatComponent, ExperienceComponent, InventoryComponent,
-  MovementSystem, CombatSystem, ProgressionSystem, EconomySystem
+  Engine,
+  World,
+  TransformComponent,
+  HealthComponent,
+  MovementComponent,
+  CombatComponent,
+  ExperienceComponent,
+  InventoryComponent,
+  MovementSystem,
+  CombatSystem,
+  ProgressionSystem,
+  EconomySystem,
 } from 'vital-engine-sdk'
 
 const engine = new Engine()
@@ -125,21 +127,22 @@ const player = world.createEntity()
 player.addComponent(new TransformComponent(400, 300))
 player.addComponent(new HealthComponent(100))
 player.addComponent(new MovementComponent(150))
-player.addComponent(new CombatComponent({
-  damage: 25,
-  range: 80,
-  attackSpeed: 2
-}))
+player.addComponent(
+  new CombatComponent({
+    damage: 25,
+    range: 80,
+    attackSpeed: 2,
+  })
+)
 player.addComponent(new ExperienceComponent(1))
 player.addComponent(new InventoryComponent(20))
 
 // Create enemies
 for (let i = 0; i < 10; i++) {
   const enemy = world.createEntity()
-  enemy.addComponent(new TransformComponent(
-    Math.random() * 800,
-    Math.random() * 600
-  ))
+  enemy.addComponent(
+    new TransformComponent(Math.random() * 800, Math.random() * 600)
+  )
   enemy.addComponent(new HealthComponent(50))
   enemy.addComponent(new MovementComponent(75))
 }
@@ -147,9 +150,9 @@ for (let i = 0; i < 10; i++) {
 // Game loop
 function update() {
   world.update(16.67)
-  
+
   // Your rendering/UI updates here
-  
+
   requestAnimationFrame(update)
 }
 
