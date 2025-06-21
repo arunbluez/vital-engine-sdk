@@ -58,6 +58,7 @@ export interface Skill {
   effects: SkillEffect[]
   requirements?: SkillRequirement[]
   evolveInto?: string[] // Evolution target skill IDs
+  metadata?: Record<string, unknown> // Additional skill data
 }
 
 /**

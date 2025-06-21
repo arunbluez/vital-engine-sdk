@@ -240,11 +240,11 @@ export class SpawnerComponent extends Component {
   ): boolean {
     switch (requirement.type) {
       case 'time':
-        const timeValue = currentTime - (gameState.startTime || 0)
+        const timeValue = currentTime - ((gameState.startTime as number) || 0)
         return this.compareValues(timeValue, requirement.operator, requirement.value as number)
       
       case 'level':
-        const playerLevel = gameState.playerLevel || 1
+        const playerLevel = (gameState.playerLevel as number) || 1
         return this.compareValues(playerLevel, requirement.operator, requirement.value as number)
       
       case 'previous_wave':

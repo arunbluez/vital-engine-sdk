@@ -26,6 +26,9 @@ export {
   ProgressionSystem,
   EconomySystem,
   SkillSystem,
+  AISystem,
+  PathfindingType,
+  SpawnSystem,
   EnemySystem,
   CollectionSystem,
   SimpleCollectionSystem,
@@ -44,11 +47,16 @@ export {
   SkillType,
   SkillEffectType,
   SkillTargetType,
+  AIComponent,
+  AIState,
+  AIPersonality,
   EnemyAIComponent,
   AIBehaviorType,
   AIBehaviorState,
   MovementPattern,
   SpawnerComponent,
+  SpawnPattern,
+  SpawnTiming,
   CollectibleComponent,
   MagnetComponent,
   DifficultyComponent,
@@ -61,7 +69,31 @@ export {
   MathUtils,
   ObjectPool,
   PoolManager,
+  SpatialHashGrid,
+  QuadTree,
 } from './utils'
+
+// Configuration
+export {
+  DEFAULT_SKILL_DATABASE,
+  DEFAULT_SKILL_SELECTION_CONFIG,
+  type SkillDatabase,
+  type SkillTemplate,
+  type SkillEffectTemplate,
+} from './config/SkillConfig'
+
+export {
+  BASIC_ENEMIES,
+  ADVANCED_ENEMIES,
+  BOSS_ENEMIES,
+  SPAWN_WAVES,
+  BOSS_PHASES,
+  ENEMY_GROUPS,
+  DIFFICULTY_PRESETS,
+  getAllEnemyTypes,
+  getEnemiesByLevel,
+  createCustomWave,
+} from './config/EnemyConfig'
 
 // Type definitions
 export type {
@@ -119,6 +151,22 @@ export type {
 } from './types'
 
 export { GameEventType } from './types'
+
+// Export additional types from systems and components
+export type { 
+  AISystemConfig,
+  SpawnSystemConfig,
+} from './systems'
+
+export type {
+  StateTransition,
+  AIContext,
+  AIMemory,
+  BehaviorNode,
+  EnemyType,
+  SpawnWave,
+  BossPhase,
+} from './components'
 
 // Version
 export const VERSION = '0.0.1'
