@@ -124,6 +124,14 @@ export class World {
       throw new Error(`System "${system.name}" already exists in world`)
     }
 
+    // Validate system has required components defined
+    if (!system.requiredComponents || !Array.isArray(system.requiredComponents)) {
+      throw new Error(
+        `System "${system.name}" must define requiredComponents as an array. ` +
+        `Current value: ${system.requiredComponents}`
+      )
+    }
+
     this.systems.set(system.name, system)
 
     // Initialize the system
@@ -206,6 +214,12 @@ export class World {
    * Gets entities that match a system's requirements
    */
   private getEntitiesForSystem(system: System): EntityQuery[] {
+    // Return empty array if system has invalid requiredComponents
+    if (!system.requiredComponents || !Array.isArray(system.requiredComponents)) {
+      console.warn(`System "${system.name}" has invalid requiredComponents, returning empty entity list`)
+      return []
+    }
+
     const queryKey = this.getQueryKey(system.requiredComponents)
     const entityIds = this.entityQueries.get(queryKey) ?? new Set()
 
@@ -249,6 +263,12 @@ export class World {
 
       // Check each system's requirements
       this.systems.forEach((system) => {
+        // Skip systems with invalid requiredComponents
+        if (!system.requiredComponents || !Array.isArray(system.requiredComponents)) {
+          console.warn(`System "${system.name}" has invalid requiredComponents, skipping query update`)
+          return
+        }
+
         if (entity.hasComponents(system.requiredComponents)) {
           const queryKey = this.getQueryKey(system.requiredComponents)
           let query = this.entityQueries.get(queryKey)
@@ -268,6 +288,11 @@ export class World {
    * Creates a query key from component types
    */
   private getQueryKey(componentTypes: ComponentType[]): string {
+    // Defensive check to ensure componentTypes is an array
+    if (!componentTypes || !Array.isArray(componentTypes)) {
+      console.error('getQueryKey called with invalid componentTypes:', componentTypes)
+      return ''
+    }
     return componentTypes.slice().sort().join(',')
   }
 

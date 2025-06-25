@@ -44,10 +44,17 @@ export {
 export {
   CollectibleComponent,
   CollectibleType,
+  CollectibleRarity,
+  CollectionBehavior,
   type MagnetismConfig,
+  type CollectibleEffect,
+  type CollectionRequirement,
 } from './Collectible'
 export {
   MagnetComponent,
+  MagnetFieldType,
+  MagnetTrigger,
+  MagnetTargetType,
   type MagneticField,
   type CollectionFilter,
 } from './Magnet'

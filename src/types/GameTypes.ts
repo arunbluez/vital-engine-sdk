@@ -51,3 +51,5 @@ export interface InputState {
 
 export type UpdateCallback = (deltaTime: number) => void
 export type RenderCallback = (state: GameState) => void
+
+export type CollectibleType = 'experience' | 'currency' | 'health' | 'powerup' | 'item'

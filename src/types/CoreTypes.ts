@@ -58,6 +58,7 @@ export interface SystemUpdateContext {
   deltaTime: number
   totalTime: number
   frameCount: number
+  timestamp?: number
 }
 
 export interface System {

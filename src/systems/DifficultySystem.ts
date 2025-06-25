@@ -218,159 +218,117 @@ export class DifficultySystem extends System {
   }
 
   private applyDifficultyModifiers(entity: DifficultyEntityQuery): void {
-    // TODO: This method has implementation issues with component properties
-    // Temporarily disabled to allow tests to run
-    return
-    /* Original implementation disabled due to compilation errors:
     const difficulty = entity.difficulty
-    const scalableEntities = this.world?.getEntitiesWithComponents(
-      []
-    ) as ScalableEntityQuery[]
+    if (!this.world) return
 
-    if (!scalableEntities) return
-
+    // Get all entities to potentially scale
+    const allEntities = this.world.getAllEntities()
+    
     for (const [modifierId, modifier] of difficulty.activeModifiers) {
-      const appliedEntities = this.getEntitiesForModifier(
-        scalableEntities,
-        modifier
-      )
-
-      for (const targetEntity of appliedEntities) {
-        this.applyModifierToEntity(
-          targetEntity,
-          modifier,
-          difficulty.currentScore
-        )
+      // Filter entities based on modifier target
+      for (const targetEntity of allEntities) {
+        if (this.shouldApplyModifier(targetEntity, modifier)) {
+          this.applyModifierToEntity(
+            targetEntity,
+            modifier,
+            difficulty.currentScore
+          )
+        }
       }
     }
-    */ // End of disabled implementation
   }
 
-  private getEntitiesForModifier(
-    entities: ScalableEntityQuery[],
-    modifier: DifficultyModifier
-  ): ScalableEntityQuery[] {
+  private shouldApplyModifier(entity: any, modifier: DifficultyModifier): boolean {
     const targetProperty = modifier.targetProperty
-
-    if (targetProperty === 'all') return entities
-
-    return entities.filter((entity) => {
-      if (targetProperty.startsWith('health.') && entity.health) return true
-      if (targetProperty.startsWith('combat.') && entity.combat) return true
-      if (targetProperty.startsWith('movement.') && entity.movement) return true
-      if (targetProperty.startsWith('spawner.') && entity.spawner) return true
-      if (targetProperty.startsWith('enemyAI.') && entity.enemyAI) return true
-      return false
-    })
+    
+    if (targetProperty === 'all') return true
+    
+    if (targetProperty.startsWith('health.') && entity.hasComponent('health')) return true
+    if (targetProperty.startsWith('combat.') && entity.hasComponent('combat')) return true
+    if (targetProperty.startsWith('movement.') && entity.hasComponent('movement')) return true
+    if (targetProperty.startsWith('spawner.') && entity.hasComponent('spawner')) return true
+    if (targetProperty.startsWith('enemyAI.') && entity.hasComponent('enemyAI')) return true
+    
+    return false
   }
+
 
   private applyModifierToEntity(
-    entity: ScalableEntityQuery,
+    entity: any,
     modifier: DifficultyModifier,
     difficultyScore: number
   ): void {
-    // TODO: This method has implementation issues with component properties
-    // Temporarily disabled to allow tests to run
-    return
-    /* Original implementation disabled due to compilation errors:
     const targetProperty = modifier.targetProperty
     const normalizedScore = Math.min(difficultyScore / 100, 5.0)
+    const difficultyEntities = this.world?.getEntitiesWithComponents(['difficulty']) as DifficultyEntityQuery[]
+    const difficulty = difficultyEntities?.[0]?.difficulty as DifficultyComponent
+    
+    if (!difficulty) return
 
-    if (targetProperty === 'health.maxHealth' && entity.health) {
-      const baseHealth = entity.health.baseMaxHealth || entity.health.maxHealth
-      const scaledHealth =
-        modifier.calculateModifierValue(modifier, normalizedScore) * baseHealth
-      entity.health.maxHealth = Math.max(1, Math.round(scaledHealth))
-      if (!entity.health.baseMaxHealth) entity.health.baseMaxHealth = baseHealth
-    } else if (targetProperty === 'combat.damage' && entity.combat) {
-      const baseDamage = entity.combat.baseDamage || entity.combat.damage
-      const scaledDamage =
-        modifier.calculateModifierValue(modifier, normalizedScore) * baseDamage
-      entity.combat.damage = Math.max(1, Math.round(scaledDamage))
-      if (!entity.combat.baseDamage) entity.combat.baseDamage = baseDamage
-    } else if (targetProperty === 'movement.speed' && entity.movement) {
-      const baseSpeed = entity.movement.baseSpeed || entity.movement.speed
-      const scaledSpeed =
-        modifier.calculateModifierValue(modifier, normalizedScore) * baseSpeed
-      entity.movement.speed = Math.max(0.1, scaledSpeed)
-      if (!entity.movement.baseSpeed) entity.movement.baseSpeed = baseSpeed
-    } else if (targetProperty === 'spawner.spawnRate' && entity.spawner) {
-      const baseRate =
-        entity.spawner.baseSpawnRate || entity.spawner.currentSpawnRate
-      const scaledRate =
-        modifier.calculateModifierValue(modifier, normalizedScore) * baseRate
-      entity.spawner.currentSpawnRate = Math.max(0.1, scaledRate)
-      if (!entity.spawner.baseSpawnRate) entity.spawner.baseSpawnRate = baseRate
-    } else if (targetProperty === 'spawner.enemyVariety' && entity.spawner) {
-      const baseVariety =
-        entity.spawner.baseEnemyVariety ||
-        entity.spawner.maxConcurrentEnemyTypes
-      const scaledVariety =
-        modifier.calculateModifierValue(modifier, normalizedScore) * baseVariety
-      entity.spawner.maxConcurrentEnemyTypes = Math.max(
-        1,
-        Math.round(scaledVariety)
-      )
-      if (!entity.spawner.baseEnemyVariety)
-        entity.spawner.baseEnemyVariety = baseVariety
-    } else if (targetProperty === 'spawner.bossFrequency' && entity.spawner) {
-      const baseBossRate = entity.spawner.baseBossSpawnRate || 0.1
-      const scaledBossRate =
-        modifier.calculateModifierValue(modifier, normalizedScore) *
-        baseBossRate
-      entity.spawner.bossSpawnRate = Math.min(1.0, scaledBossRate)
-      if (!entity.spawner.baseBossSpawnRate)
-        entity.spawner.baseBossSpawnRate = baseBossRate
-    } else if (targetProperty === 'enemyAI.aggressionLevel' && entity.enemyAI) {
-      const baseAggression = entity.enemyAI.baseAggressionLevel || 1.0
-      const scaledAggression =
-        modifier.calculateModifierValue(modifier, normalizedScore) *
-        baseAggression
-      entity.enemyAI.aggressionLevel = Math.max(
-        0.1,
-        Math.min(3.0, scaledAggression)
-      )
-      if (!entity.enemyAI.baseAggressionLevel)
-        entity.enemyAI.baseAggressionLevel = baseAggression
+    // Helper function to get calculated modifier value
+    const getModifierValue = () => difficulty.calculateModifierValue(modifier, normalizedScore)
+
+    if (targetProperty === 'health.maxHealth' && entity.hasComponent('health')) {
+      const health = entity.getComponent('health') as HealthComponent
+      const baseHealth = (health as any).baseMaximum || health.maximum
+      const scaledHealth = getModifierValue() * baseHealth
+      health.maximum = Math.max(1, Math.round(scaledHealth))
+      if (!(health as any).baseMaximum) (health as any).baseMaximum = baseHealth
+    } else if (targetProperty === 'combat.damage' && entity.hasComponent('combat')) {
+      const combat = entity.getComponent('combat') as CombatComponent
+      const baseDamage = (combat as any).baseDamage || combat.weapon.damage
+      const scaledDamage = getModifierValue() * baseDamage
+      combat.weapon.damage = Math.max(1, Math.round(scaledDamage))
+      if (!(combat as any).baseDamage) (combat as any).baseDamage = baseDamage
+    } else if (targetProperty === 'movement.speed' && entity.hasComponent('movement')) {
+      const movement = entity.getComponent('movement') as MovementComponent
+      const baseSpeed = (movement as any).baseMaxSpeed || movement.maxSpeed
+      const scaledSpeed = getModifierValue() * baseSpeed
+      movement.maxSpeed = Math.max(0.1, scaledSpeed)
+      if (!(movement as any).baseMaxSpeed) (movement as any).baseMaxSpeed = baseSpeed
+    } else if (targetProperty === 'spawner.spawnRate' && entity.hasComponent('spawner')) {
+      const spawner = entity.getComponent('spawner') as SpawnerComponent
+      const baseRate = (spawner as any).baseSpawnRate || spawner.currentSpawnRate
+      const scaledRate = getModifierValue() * baseRate
+      spawner.currentSpawnRate = Math.max(0.1, scaledRate)
+      if (!(spawner as any).baseSpawnRate) (spawner as any).baseSpawnRate = baseRate
+    } else if (targetProperty === 'spawner.maxActiveEnemies' && entity.hasComponent('spawner')) {
+      const spawner = entity.getComponent('spawner') as SpawnerComponent
+      const baseMax = (spawner as any).baseMaxActiveEnemies || spawner.maxActiveEnemies
+      const scaledMax = getModifierValue() * baseMax
+      spawner.maxActiveEnemies = Math.max(1, Math.round(scaledMax))
+      if (!(spawner as any).baseMaxActiveEnemies) (spawner as any).baseMaxActiveEnemies = baseMax
+    } else if (targetProperty === 'spawner.timeBetweenWaves' && entity.hasComponent('spawner')) {
+      const spawner = entity.getComponent('spawner') as SpawnerComponent
+      const baseTime = (spawner as any).baseTimeBetweenWaves || spawner.timeBetweenWaves
+      const scaledTime = getModifierValue() * baseTime
+      spawner.timeBetweenWaves = Math.max(1000, Math.round(scaledTime))
+      if (!(spawner as any).baseTimeBetweenWaves) (spawner as any).baseTimeBetweenWaves = baseTime
+    } else if (targetProperty === 'enemyAI.aggressionLevel' && entity.hasComponent('enemyAI')) {
+      const enemyAI = entity.getComponent('enemyAI') as EnemyAIComponent
+      const baseAggression = (enemyAI as any).baseAggressionLevel || 1.0
+      const scaledAggression = getModifierValue() * baseAggression
+      enemyAI.aggressionLevel = Math.max(0.1, Math.min(3.0, scaledAggression))
+      if (!(enemyAI as any).baseAggressionLevel) (enemyAI as any).baseAggressionLevel = baseAggression
     } else if (targetProperty === 'all') {
-      if (entity.health)
-        this.applyModifierToEntity(
-          entity,
-          { ...modifier, targetProperty: 'health.maxHealth' },
-          difficultyScore
-        )
-      if (entity.combat)
-        this.applyModifierToEntity(
-          entity,
-          { ...modifier, targetProperty: 'combat.damage' },
-          difficultyScore
-        )
-      if (entity.movement)
-        this.applyModifierToEntity(
-          entity,
-          { ...modifier, targetProperty: 'movement.speed' },
-          difficultyScore
-        )
-      if (entity.spawner) {
-        this.applyModifierToEntity(
-          entity,
-          { ...modifier, targetProperty: 'spawner.spawnRate' },
-          difficultyScore
-        )
-        this.applyModifierToEntity(
-          entity,
-          { ...modifier, targetProperty: 'spawner.bossFrequency' },
-          difficultyScore
-        )
+      // Apply all possible modifiers
+      if (entity.hasComponent('health')) {
+        this.applyModifierToEntity(entity, { ...modifier, targetProperty: 'health.maxHealth' }, difficultyScore)
       }
-      if (entity.enemyAI)
-        this.applyModifierToEntity(
-          entity,
-          { ...modifier, targetProperty: 'enemyAI.aggressionLevel' },
-          difficultyScore
-        )
+      if (entity.hasComponent('combat')) {
+        this.applyModifierToEntity(entity, { ...modifier, targetProperty: 'combat.damage' }, difficultyScore)
+      }
+      if (entity.hasComponent('movement')) {
+        this.applyModifierToEntity(entity, { ...modifier, targetProperty: 'movement.speed' }, difficultyScore)
+      }
+      if (entity.hasComponent('spawner')) {
+        this.applyModifierToEntity(entity, { ...modifier, targetProperty: 'spawner.spawnRate' }, difficultyScore)
+        this.applyModifierToEntity(entity, { ...modifier, targetProperty: 'spawner.maxActiveEnemies' }, difficultyScore)
+      }
+      if (entity.hasComponent('enemyAI')) {
+        this.applyModifierToEntity(entity, { ...modifier, targetProperty: 'enemyAI.aggressionLevel' }, difficultyScore)
+      }
     }
-    */ // End of disabled implementation
   }
 
   public recordPlayerAction(

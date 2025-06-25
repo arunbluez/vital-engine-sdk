@@ -218,33 +218,30 @@ export class MagnetComponent extends Component {
    * Manually activates the magnet
    */
   activate(currentTime: number): boolean {
-    if (
-      this.trigger === MagnetTrigger.MANUAL ||
-      this.trigger === MagnetTrigger.PERIODIC
-    ) {
-      // Check cooldown
-      if (currentTime - this.lastActivationTime < this.activationCooldown) {
-        return false
-      }
-
-      this.manuallyActivated = true
-      this.lastActivationTime = currentTime
-      this.stats.activationCount++
-      this.stats.lastActivationTime = currentTime
-      return true
+    // Check cooldown for all trigger types
+    if (currentTime - this.lastActivationTime < this.activationCooldown) {
+      return false
     }
-    return false
+
+    // For manual trigger, set the manuallyActivated flag
+    if (this.trigger === MagnetTrigger.MANUAL) {
+      this.manuallyActivated = true
+    }
+
+    this.lastActivationTime = currentTime
+    this.stats.activationCount++
+    this.stats.lastActivationTime = currentTime
+    return true
   }
 
   /**
    * Triggers magnet activation based on events
    */
   triggerActivation(triggerType: MagnetTrigger, currentTime: number): boolean {
-    if (this.trigger !== triggerType) {
-      return false
+    if (this.trigger === triggerType) {
+      return this.activate(currentTime)
     }
-
-    return this.activate(currentTime)
+    return false
   }
 
   /**

@@ -59,7 +59,12 @@ export {
   SpawnTiming,
   CollectibleComponent,
   CollectibleType,
+  CollectibleRarity,
+  CollectionBehavior,
+  MagnetFieldType,
+  MagnetTrigger,
   MagnetComponent,
+  MagnetTargetType,
   DifficultyComponent,
 } from './components'
 

@@ -37,6 +37,8 @@ import {
     DEFAULT_SKILL_DATABASE,
     type EntityDestroyedEventData,
     CollectibleType,
+    CollectibleRarity,
+    MagnetTrigger,
     type SpawnWave,
     type SkillDatabase,
     type EnemyType
@@ -211,7 +213,7 @@ class GameFrontend {
             maxActiveEffects: 10,
             eventSystem: this.events
         }))
-        this.world.addSystem(new CollectionSystem())
+        this.world.addSystem(new CollectionSystem(this.events, this.world))
         this.world.addSystem(new EnemySystem())
         this.world.addSystem(new DifficultySystem())
         
@@ -307,7 +309,31 @@ class GameFrontend {
                             const value = randomType === CollectibleType.EXPERIENCE ? 5 : 
                                          randomType === CollectibleType.HEALTH ? 10 : 3
                             
-                            collectible.addComponent(new CollectibleComponent(randomType, value))
+                            // Determine rarity
+                            let rarity = CollectibleRarity.COMMON
+                            const rarityRoll = Math.random()
+                            if (rarityRoll < 0.05) { // 5% legendary
+                                rarity = CollectibleRarity.LEGENDARY
+                            } else if (rarityRoll < 0.15) { // 10% epic
+                                rarity = CollectibleRarity.EPIC
+                            } else if (rarityRoll < 0.35) { // 20% rare
+                                rarity = CollectibleRarity.RARE
+                            }
+                            
+                            const collectibleComponent = new CollectibleComponent(randomType, value, rarity)
+                            
+                            // Enhanced value for rarer items
+                            if (rarity === CollectibleRarity.RARE) {
+                                collectibleComponent.value *= 2
+                            } else if (rarity === CollectibleRarity.EPIC) {
+                                collectibleComponent.value *= 3
+                            } else if (rarity === CollectibleRarity.LEGENDARY) {
+                                collectibleComponent.value *= 5
+                            }
+                            
+                            // Add movement component for magnetism
+                            collectible.addComponent(new MovementComponent())
+                            collectible.addComponent(collectibleComponent)
                         }
                     }
                 }
@@ -348,6 +374,25 @@ class GameFrontend {
                 const particleType = data.type === CollectibleType.HEALTH ? 'heal' : 'xp'
                 this.createParticles(data.position.x, data.position.y, particleType, 5)
             }
+        })
+        
+        this.events.on('CHAIN_COMPLETED', (event) => {
+            console.log('⭐ Collection chain completed!', event.data)
+            const data = event.data as any
+            // Create celebratory particles
+            if (this.playerId) {
+                const player = this.world.getEntity(this.playerId)
+                if (player) {
+                    const transform = player.getComponent('transform') as TransformComponent
+                    if (transform) {
+                        this.createParticles(transform.position.x, transform.position.y, 'xp', 20)
+                    }
+                }
+            }
+        })
+        
+        this.events.on('COLLECTIBLE_EXPIRED', (event) => {
+            console.log('⏰ Collectible expired:', event.data)
         })
         
         // Difficulty events
@@ -875,6 +920,7 @@ class GameFrontend {
             } else if (entity.hasComponent('collectible')) {
                 const collectible = entity.getComponent('collectible') as CollectibleComponent
                 if (collectible) {
+                    // Base color and size based on type
                     switch (collectible.collectibleType) {
                         case CollectibleType.EXPERIENCE:
                             color = '#00ffff' // Cyan for experience
@@ -895,6 +941,75 @@ class GameFrontend {
                         default:
                             color = '#ffffff' // White for unknown
                             size = 4
+                    }
+                    
+                    // Rarity effects
+                    switch (collectible.rarity) {
+                        case CollectibleRarity.RARE:
+                            // Draw outer glow for rare items
+                            this.ctx.globalAlpha = 0.3
+                            this.renderer.drawCircle(
+                                transform.position.x,
+                                transform.position.y,
+                                size * 2,
+                                color
+                            )
+                            this.ctx.globalAlpha = 1
+                            break
+                        case CollectibleRarity.EPIC:
+                            // Draw double glow for epic
+                            this.ctx.globalAlpha = 0.2
+                            this.renderer.drawCircle(
+                                transform.position.x,
+                                transform.position.y,
+                                size * 3,
+                                color
+                            )
+                            this.ctx.globalAlpha = 0.4
+                            this.renderer.drawCircle(
+                                transform.position.x,
+                                transform.position.y,
+                                size * 2,
+                                color
+                            )
+                            this.ctx.globalAlpha = 1
+                            break
+                        case CollectibleRarity.LEGENDARY:
+                            // Animated pulse for legendary
+                            const pulse = Math.sin(Date.now() * 0.005) * 0.5 + 0.5
+                            this.ctx.globalAlpha = pulse * 0.5
+                            this.renderer.drawCircle(
+                                transform.position.x,
+                                transform.position.y,
+                                size * 4,
+                                color
+                            )
+                            this.ctx.globalAlpha = 1
+                            size *= 1.5
+                            break
+                    }
+                    
+                    // Magnetism effect
+                    if (collectible.isBeingAttracted) {
+                        // Draw attraction lines
+                        const player = this.world.getEntity(this.playerId!)
+                        if (player) {
+                            const playerTransform = player.getComponent('transform') as TransformComponent
+                            if (playerTransform) {
+                                this.ctx.strokeStyle = color
+                                this.ctx.globalAlpha = 0.3
+                                this.ctx.setLineDash([5, 5])
+                                this.ctx.beginPath()
+                                this.ctx.moveTo(transform.position.x, transform.position.y)
+                                this.ctx.lineTo(playerTransform.position.x, playerTransform.position.y)
+                                this.ctx.stroke()
+                                this.ctx.setLineDash([])
+                                this.ctx.globalAlpha = 1
+                            }
+                        }
+                        
+                        // Make attracted items glow
+                        size *= 1.2
                     }
                 } else {
                     color = '#ffff00'
@@ -964,13 +1079,42 @@ class GameFrontend {
                 
                 const magnet = entity.getComponent('magnet') as MagnetComponent
                 if (magnet && magnet.magneticField) {
+                    // Different colors based on magnet state
+                    let magnetColor = 'rgba(0, 255, 255, 0.1)' // Default cyan
+                    
+                    if (magnet.active) {
+                        // Active magnet - brighter and pulsing
+                        const pulse = Math.sin(Date.now() * 0.004) * 0.1 + 0.2
+                        magnetColor = `rgba(0, 255, 255, ${pulse})`
+                    }
+                    
+                    // Draw magnetic field range
                     this.renderer.drawCircle(
                         transform.position.x,
                         transform.position.y,
                         magnet.magneticField.range,
-                        'rgba(0, 255, 255, 0.1)',
+                        magnetColor,
                         false
                     )
+                    
+                    // Draw collection radius (smaller inner circle)
+                    this.renderer.drawCircle(
+                        transform.position.x,
+                        transform.position.y,
+                        magnet.collectionRadius,
+                        'rgba(255, 255, 0, 0.2)',
+                        false
+                    )
+                    
+                    // Show magnet bonuses if any
+                    if (magnet.experienceBonus > 0 || magnet.currencyBonus > 0) {
+                        // Draw bonus indicator
+                        this.ctx.fillStyle = 'rgba(255, 215, 0, 0.8)'
+                        this.ctx.font = '10px Arial'
+                        this.ctx.textAlign = 'center'
+                        const bonusText = `+${Math.round(Math.max(magnet.experienceBonus, magnet.currencyBonus) * 100)}%`
+                        this.ctx.fillText(bonusText, transform.position.x, transform.position.y - 25)
+                    }
                 }
                 
                 // Visual indicator for active skills
@@ -1846,8 +1990,8 @@ class GameFrontend {
     
     private testCollectionSystem(): void {
         console.clear()
-        console.log('🧲 === TESTING COLLECTION SYSTEM ===')
-        console.log('Collection System is already enabled!')
+        console.log('🧲 === TESTING COLLECTION & MAGNETISM SYSTEM ===')
+        console.log('Enhanced Collection System with advanced features!')
         
         const player = this.world.getEntity(this.playerId!)
         const collectibles = this.world.getActiveEntities().filter((e: Entity) => 
@@ -1861,26 +2005,83 @@ class GameFrontend {
             const magnet = player.getComponent('magnet') as MagnetComponent
             if (magnet) {
                 console.log('✅ Collection System enabled!')
-                console.log(`  Magnet range: ${magnet.magneticField.range}`)
-                console.log(`  Magnet strength: ${magnet.magneticField.strength}`)
-                console.log(`  Magnet active: ${magnet.isActive}`)
+                console.log(`  🧲 Magnet Configuration:`)
+                console.log(`     - Field Type: ${magnet.magneticField.type}`)
+                console.log(`     - Range: ${magnet.magneticField.range}`)
+                console.log(`     - Strength: ${magnet.magneticField.strength}`)
+                console.log(`     - Collection Radius: ${magnet.collectionRadius}`)
+                console.log(`     - Active: ${magnet.active}`)
+                console.log(`     - Trigger: ${magnet.trigger}`)
+                
+                // Enhanced magnet configuration
+                magnet.magneticField.range = 200
+                magnet.magneticField.strength = 300
+                magnet.experienceBonus = 0.5  // 50% XP bonus
+                magnet.currencyBonus = 0.25   // 25% currency bonus
+                
+                console.log(`  📊 Collection Statistics:`)
+                console.log(`     - Total Items Collected: ${magnet.stats.totalItemsCollected}`)
+                console.log(`     - Most Valuable Item: ${magnet.stats.mostValuableItemCollected}`)
+                console.log(`     - Items Currently Attracted: ${magnet.attractedItems.size}`)
                 
                 if (collectibles.length > 0) {
                     const firstCollectible = collectibles[0]
                     console.log('🔍 First collectible components:', firstCollectible.getComponentTypes())
                     const collectibleComp = firstCollectible.getComponent('collectible') as CollectibleComponent
                     if (collectibleComp) {
-                        console.log(`  Type: ${collectibleComp.collectibleType}`)
-                        console.log(`  Rarity: ${collectibleComp.rarity}`)
+                        console.log(`  📦 Collectible Details:`)
+                        console.log(`     - Type: ${collectibleComp.collectibleType}`)
+                        console.log(`     - Rarity: ${collectibleComp.rarity}`)
+                        console.log(`     - Value: ${collectibleComp.value}`)
+                        console.log(`     - Behavior: ${collectibleComp.collectionBehavior}`)
+                        console.log(`     - Magnetism Enabled: ${collectibleComp.magnetismConfig.enabled}`)
                     }
                 }
                 
-                console.log('🎮 Move near cyan circles (collectibles)')
-                console.log('👀 They should move toward you and disappear when collected')
+                // Create test collection chain
+                const collectionSystem = this.world.getSystem('collection') as CollectionSystem
+                if (collectionSystem) {
+                    const playerTransform = player.getComponent('transform') as TransformComponent
+                    const chainPositions = [
+                        { x: playerTransform.position.x + 100, y: playerTransform.position.y },
+                        { x: playerTransform.position.x + 120, y: playerTransform.position.y },
+                        { x: playerTransform.position.x + 140, y: playerTransform.position.y },
+                        { x: playerTransform.position.x + 160, y: playerTransform.position.y },
+                        { x: playerTransform.position.x + 180, y: playerTransform.position.y }
+                    ]
+                    
+                    collectionSystem.createCollectibleChain(
+                        chainPositions,
+                        CollectibleType.EXPERIENCE,
+                        10,
+                        0.2  // 20% bonus per item in chain
+                    )
+                    console.log('  ⛓️  Created XP chain with 5 items!')
+                }
+                
+                console.log('')
+                console.log('🎮 CONTROLS:')
+                console.log('  - Move near collectibles to attract and collect them')
+                console.log('  - Watch the chain bonus when collecting the XP chain')
+                console.log('  - Kill enemies to trigger magnet activation')
+                console.log('')
+                console.log('✨ ENHANCED FEATURES:')
+                console.log('  - Spatial partitioning for performance')
+                console.log('  - Collection priority system')
+                console.log('  - Magnetism physics with configurable force')
+                console.log('  - Collection chains with cumulative bonuses')
+                console.log('  - Lifetime management and auto-collection')
+                console.log('  - XP and currency bonuses from magnet')
             } else {
                 console.log('❌ No magnet component found on player')
             }
         }
+        
+        // Listen for collection events
+        this.events.once('CHAIN_COMPLETED', (event) => {
+            console.log('⭐ CHAIN COMPLETED!', event.data)
+        })
+        
         console.log('Press Q for menu, or 1/2/4/5 for other tests')
     }
     
@@ -2071,13 +2272,13 @@ class GameFrontend {
     }
     
     private renderCollectiblesLegend(): void {
-        const x = this.canvas.width - 160
-        const startY = this.canvas.height - 120
+        const x = this.canvas.width - 180
+        const startY = this.canvas.height - 180
         const lineHeight = 20
         
         // Background for legend
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
-        this.ctx.fillRect(x - 10, startY - 15, 150, 110)
+        this.ctx.fillRect(x - 10, startY - 15, 170, 170)
         
         // Title
         this.ctx.fillStyle = '#fff'
@@ -2105,6 +2306,25 @@ class GameFrontend {
         this.renderer.drawCircle(x + 10, startY + lineHeight * 4 + 2, 5, '#ffff00', true)
         this.ctx.fillStyle = '#ffff00'
         this.ctx.fillText('Currency', x + 25, startY + lineHeight * 4 + 5)
+        
+        // Rarity indicators
+        this.ctx.fillStyle = '#fff'
+        this.ctx.font = 'bold 11px Arial'
+        this.ctx.fillText('Rarities:', x, startY + lineHeight * 5.5)
+        
+        // Rare (with glow)
+        this.ctx.globalAlpha = 0.3
+        this.renderer.drawCircle(x + 10, startY + lineHeight * 6 + 2, 8, '#00ffff', true)
+        this.ctx.globalAlpha = 1
+        this.renderer.drawCircle(x + 10, startY + lineHeight * 6 + 2, 4, '#00ffff', true)
+        this.ctx.fillStyle = '#88ccff'
+        this.ctx.font = '10px Arial'
+        this.ctx.fillText('Rare (glow)', x + 25, startY + lineHeight * 6 + 5)
+        
+        // Legendary (pulsing)
+        this.renderer.drawCircle(x + 10, startY + lineHeight * 7 + 2, 6, '#ff00ff', true)
+        this.ctx.fillStyle = '#ff88ff'
+        this.ctx.fillText('Legendary (pulse)', x + 25, startY + lineHeight * 7 + 5)
     }
 }
 

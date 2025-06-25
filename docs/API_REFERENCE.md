@@ -535,43 +535,162 @@ skills.addSkill({
 
 ### Collectible Component
 
-Items that can be collected from the world.
+Items that can be collected from the world with advanced features like magnetism, lifetime management, and collection requirements.
 
 ```typescript
-import { CollectibleComponent, CollectibleType, CollectibleEffect } from 'vital-engine-sdk';
+import { 
+  CollectibleComponent, 
+  CollectibleType, 
+  CollectibleRarity,
+  CollectionBehavior,
+  CollectibleEffect,
+  MagnetismConfig,
+  CollectionRequirement
+} from 'vital-engine-sdk';
 
 enum CollectibleType {
-  CURRENCY = 'CURRENCY',
-  EXPERIENCE = 'EXPERIENCE',
-  HEALTH_POTION = 'HEALTH_POTION',
-  EQUIPMENT = 'EQUIPMENT',
-  MATERIAL = 'MATERIAL'
+  EXPERIENCE = 'experience',
+  HEALTH = 'health',
+  MANA = 'mana',
+  CURRENCY = 'currency',
+  POWER_UP = 'power_up',
+  SKILL_POINT = 'skill_point',
+  UPGRADE_MATERIAL = 'upgrade_material',
+  WEAPON = 'weapon',
+  ARMOR = 'armor',
+  CONSUMABLE = 'consumable'
+}
+
+enum CollectibleRarity {
+  COMMON = 'common',
+  UNCOMMON = 'uncommon',
+  RARE = 'rare',
+  EPIC = 'epic',
+  LEGENDARY = 'legendary'
+}
+
+enum CollectionBehavior {
+  IMMEDIATE = 'immediate',     // Collected instantly on contact
+  MAGNETIC = 'magnetic',       // Attracted to player when in range
+  MANUAL = 'manual',          // Requires player action to collect
+  AUTOMATIC = 'automatic',     // Automatically collected after delay
+  PROXIMITY = 'proximity'      // Collected when player is nearby
 }
 
 enum CollectibleEffect {
-  NONE = 'NONE',
-  GLOW = 'GLOW',
-  PULSE = 'PULSE',
-  SPARKLE = 'SPARKLE'
+  NONE = 'none',
+  GLOW = 'glow',
+  PULSE = 'pulse',
+  SPARKLE = 'sparkle',
+  FLOAT = 'float',
+  SPIN = 'spin',
+  BOUNCE = 'bounce'
+}
+
+interface MagnetismConfig {
+  enabled: boolean;
+  range: number;              // Attraction range
+  strength: number;           // Attraction force
+  maxSpeed: number;          // Maximum attraction speed
+  acceleration: number;       // Attraction acceleration
+  decayRate: number;         // Force decay over distance
+}
+
+interface CollectionRequirement {
+  type: 'level' | 'item' | 'skill' | 'achievement';
+  value: number | string;
+  operator: '>' | '>=' | '=' | '<' | '<=';
 }
 
 class CollectibleComponent extends Component {
   readonly type = 'collectible';
   
+  // Core properties
   collectibleType: CollectibleType;
+  rarity: CollectibleRarity;
   value: number;
-  rarity: string;
+  stackSize: number;
+  currentStack: number;
+  
+  // Collection behavior
+  collectionBehavior: CollectionBehavior;
+  autoCollectDelay: number;
+  canBeCollectedBy: EntityId[];  // Empty = anyone can collect
+  
+  // Magnetism
+  magnetismConfig: MagnetismConfig;
+  isBeingAttracted: boolean;
+  attractionTarget: EntityId | null;
+  attractionStartTime: number;
+  
+  // Lifetime and despawn
+  lifetime: number;               // milliseconds (0 = never expires)
+  spawnTime: number;
+  despawnOnCollect: boolean;
+  persistAfterDeath: boolean;
+  
+  // Visual and audio
   visualEffect: CollectibleEffect;
+  effectIntensity: number;
+  soundEffect: string | null;
+  collectSound: string | null;
   
-  constructor(type: CollectibleType, value: number, rarity: string = 'common');
+  // Collection requirements
+  requirements: CollectionRequirement[];
+  collectionMessage: string | null;
   
-  canBeCollected(): boolean;
-  collect(): void;
+  // Performance optimization
+  updatePriority: number;
+  updateInterval: number;
+  
+  constructor(
+    collectibleType: CollectibleType, 
+    value: number = 1, 
+    rarity: CollectibleRarity = CollectibleRarity.COMMON
+  );
+  
+  // Methods
+  canBeCollected(collectorId: EntityId, collectorLevel?: number, collectorItems?: string[]): boolean;
+  startAttraction(targetId: EntityId, currentTime: number): void;
+  stopAttraction(): void;
+  calculateMagneticForce(currentPosition: Vector2, targetPosition: Vector2, currentTime: number): Vector2;
+  isExpired(currentTime: number): boolean;
+  shouldAutoCollect(currentTime: number): boolean;
+  getTimeRemaining(currentTime: number): number;
+  getCollectionProgress(currentTime: number): number;
+  shouldUpdate(currentTime: number): boolean;
+  updateVisualEffect(currentTime: number): void;
+  addToStack(amount: number): boolean;
+  createCollectionEvent(collectorId: EntityId, position: Vector2, currentTime: number): CollectionEvent;
 }
 
-// Usage
+// Usage examples
+// Basic collectible
 const goldCoin = new CollectibleComponent(CollectibleType.CURRENCY, 10);
+
+// Rare item with requirements
+const epicWeapon = new CollectibleComponent(CollectibleType.WEAPON, 1, CollectibleRarity.EPIC);
+epicWeapon.requirements = [{
+  type: 'level',
+  value: 10,
+  operator: '>='
+}];
+
+// Experience orb with magnetism
 const xpOrb = new CollectibleComponent(CollectibleType.EXPERIENCE, 25);
+xpOrb.magnetismConfig = {
+  enabled: true,
+  range: 200,
+  strength: 250,
+  maxSpeed: 300,
+  acceleration: 500,
+  decayRate: 0.5
+};
+
+// Auto-collect health pack
+const healthPack = new CollectibleComponent(CollectibleType.HEALTH, 50);
+healthPack.collectionBehavior = CollectionBehavior.AUTOMATIC;
+healthPack.autoCollectDelay = 5000; // Collect after 5 seconds
 ```
 
 ### Magnet Component
@@ -579,31 +698,258 @@ const xpOrb = new CollectibleComponent(CollectibleType.EXPERIENCE, 25);
 Magnetic attraction for collectibles.
 
 ```typescript
-import { MagnetComponent, MagnetismConfig } from 'vital-engine-sdk';
+import { MagnetComponent, MagnetFieldType, MagnetTrigger, MagnetTargetType } from 'vital-engine-sdk';
 
-interface MagnetismConfig {
-  enabled: boolean;
+// Magnetic field types
+enum MagnetFieldType {
+  CIRCULAR = 'circular',      // Standard radial attraction
+  DIRECTIONAL = 'directional', // Cone-shaped attraction
+  PULSE = 'pulse',            // Periodic burst attraction
+  SELECTIVE = 'selective',     // Attract specific types only
+  REPULSIVE = 'repulsive'     // Push items away
+}
+
+// Activation triggers
+enum MagnetTrigger {
+  ALWAYS_ON = 'always_on',
+  ON_KILL = 'on_kill',
+  ON_DAMAGE = 'on_damage',
+  ON_SKILL = 'on_skill',
+  MANUAL = 'manual'
+}
+
+// Target filtering
+enum MagnetTargetType {
+  ALL = 'all',
+  CURRENCY = 'currency',
+  EXPERIENCE = 'experience',
+  HEALTH = 'health',
+  POWER_UPS = 'power_ups',
+  RARE_ONLY = 'rare_only'
+}
+
+interface MagneticField {
+  type: MagnetFieldType;
   range: number;
   strength: number;
+  angle?: number; // For directional fields
+}
+
+interface MagnetFilter {
+  targetType: MagnetTargetType;
+  priority: number;
+  minRarity?: CollectibleRarity;
+  tags?: string[];
 }
 
 class MagnetComponent extends Component {
   readonly type = 'magnet';
   
-  magneticField: MagnetismConfig;
+  magneticField: MagneticField;
+  collectionRadius: number;
+  active: boolean;
+  trigger: MagnetTrigger;
+  filters: MagnetFilter[];
   
-  constructor();
+  // Bonuses
+  experienceBonus: number;
+  currencyBonus: number;
   
-  setRange(range: number): void;
-  setStrength(strength: number): void;
-  enable(): void;
-  disable(): void;
+  // Pulse configuration
+  pulseInterval: number;
+  pulseDuration: number;
+  pulseStrength: number;
+  
+  // Manual activation
+  activationDuration: number;
+  activationCooldown: number;
+  
+  // Statistics
+  stats: {
+    totalItemsCollected: number;
+    totalItemsAttracted: number;
+    mostValuableItemCollected: number;
+    averageCollectionTime: number;
+    activationCount: number;
+  };
+  
+  constructor(range?: number, strength?: number);
+  
+  // Field configuration
+  setFieldType(type: MagnetFieldType): void;
+  getEffectiveRange(): number;
+  calculateMagneticForce(magnetPos: Vector2, itemPos: Vector2, currentTime: number): Vector2;
+  
+  // Filtering
+  addFilter(filter: MagnetFilter): void;
+  removeFilter(targetType: MagnetTargetType): void;
+  shouldAttractItem(item: Entity): boolean;
+  
+  // Activation
+  activate(currentTime: number): boolean;
+  deactivate(): void;
+  isActive(currentTime: number): boolean;
+  triggerActivation(trigger: MagnetTrigger, currentTime: number): void;
+  
+  // Performance
+  shouldUpdate(currentTime: number): boolean;
+  canUpdate(): boolean;
+  markUpdated(currentTime: number): void;
+  
+  // Bonuses
+  addTemporaryBonus(type: string, value: number, duration: number): void;
+  updateTemporaryBonuses(currentTime: number): void;
 }
 
 // Usage
-const magnet = new MagnetComponent();
-magnet.setRange(100);
-magnet.setStrength(300);
+const magnet = new MagnetComponent(150, 200);
+magnet.setFieldType(MagnetFieldType.PULSE);
+magnet.pulseInterval = 2000;
+magnet.experienceBonus = 0.25; // 25% bonus XP
+
+// Add selective filtering
+magnet.addFilter({
+  targetType: MagnetTargetType.RARE_ONLY,
+  priority: 2
+});
+```
+
+### Difficulty Component
+
+Manages difficulty levels, performance metrics, and adaptive difficulty settings.
+
+```typescript
+import { 
+  DifficultyComponent, 
+  DifficultyLevel, 
+  ScalingMetric,
+  DifficultyModifier,
+  DifficultyBand,
+  PerformanceMetrics,
+  AdaptiveSettings
+} from 'vital-engine-sdk';
+
+class DifficultyComponent extends Component {
+  readonly type = 'difficulty';
+  
+  // Core properties
+  currentLevel: DifficultyLevel;
+  currentScore: number;
+  targetScore: number;
+  
+  // Performance tracking
+  performanceMetrics: PerformanceMetrics;
+  performanceHistory: number[];
+  isStabilized: boolean;
+  
+  // Configuration
+  difficultyBands: DifficultyBand[];
+  activeModifiers: Map<string, DifficultyModifier>;
+  adaptiveSettings: AdaptiveSettings;
+  
+  constructor();
+  
+  // Metric updates
+  updatePerformanceMetrics(
+    metric: ScalingMetric,
+    value: number,
+    isIncrement?: boolean
+  ): void;
+  
+  // Score calculation
+  calculateCurrentScore(): number;
+  getPerformanceScore(): number;
+  
+  // Difficulty management
+  getDifficultyBandForScore(score: number): DifficultyBand | null;
+  shouldTransitionDifficulty(newScore: number): {
+    shouldTransition: boolean;
+    newLevel?: DifficultyLevel;
+    confidence: number;
+  };
+  
+  // Modifier calculations
+  calculateModifierValue(
+    modifier: DifficultyModifier,
+    inputValue: number
+  ): number;
+}
+
+// Performance metrics tracked
+interface PerformanceMetrics {
+  survivalTime: number;
+  playerLevel: number;
+  enemiesKilled: number;
+  damageDealt: number;
+  damageTaken: number;
+  score: number;
+  collectionRate: number;
+  accuracy: number;
+  averageReactionTime: number;
+  skillActivations: number;
+  deathCount: number;
+  lastUpdateTime: number;
+}
+
+// Adaptive difficulty configuration
+interface AdaptiveSettings {
+  isEnabled: boolean;
+  adaptationRate: number;
+  adaptationInterval: number;
+  performanceWindowSize: number;
+  stabilityThreshold: number;
+  maxAdjustmentPerInterval: number;
+  targetPerformanceRange: { min: number; max: number };
+  emergencyAdjustmentThreshold: number;
+}
+
+// Difficulty modifier definition
+interface DifficultyModifier {
+  id: string;
+  name: string;
+  description: string;
+  targetProperty: string;
+  scalingFunction: ScalingFunction;
+  isActive: boolean;
+  priority: number;
+  minValue?: number;
+  maxValue?: number;
+  conditions?: DifficultyCondition[];
+}
+
+// Scaling function types
+interface ScalingFunction {
+  type: 'LINEAR' | 'EXPONENTIAL' | 'LOGARITHMIC' | 'STEP' | 'CUSTOM';
+  baseValue: number;
+  scalingFactor: number;
+  threshold?: number;
+  stepSize?: number;
+  customFormula?: string;
+}
+
+// Usage
+const difficulty = new DifficultyComponent();
+
+// Configure adaptive settings
+difficulty.adaptiveSettings = {
+  isEnabled: true,
+  adaptationRate: 0.1,
+  adaptationInterval: 5000,
+  performanceWindowSize: 10,
+  stabilityThreshold: 0.05,
+  maxAdjustmentPerInterval: 0.2,
+  targetPerformanceRange: { min: 0.6, max: 0.8 },
+  emergencyAdjustmentThreshold: 0.3
+};
+
+// Update metrics
+difficulty.updatePerformanceMetrics('ENEMIES_KILLED', 5, true);
+difficulty.updatePerformanceMetrics('DAMAGE_TAKEN', 25, true);
+
+// Check performance
+const score = difficulty.calculateCurrentScore();
+const performance = difficulty.getPerformanceScore();
+console.log(`Score: ${score}, Performance: ${performance}`);
 ```
 
 ## Systems
@@ -726,7 +1072,7 @@ progressionSystem.grantExperience(playerId, 100, 'quest_complete');
 Handles item collection and magnetic attraction.
 
 ```typescript
-import { CollectionSystem } from 'vital-engine-sdk';
+import { CollectionSystem, CollectibleType, CollectibleRarity } from 'vital-engine-sdk';
 
 class CollectionSystem extends System {
   readonly name = 'collection';
@@ -735,11 +1081,94 @@ class CollectionSystem extends System {
   constructor(eventSystem: EventSystem, world: World);
   
   update(context: SystemUpdateContext, entities: EntityQuery[]): void;
+  
+  // Collectible creation
+  createCollectible(
+    position: Vector2,
+    type: CollectibleType,
+    rarity: CollectibleRarity,
+    value: number,
+    tags: string[],
+    expirationTimeMs?: number
+  ): EntityId;
+  
+  // Magnetic collector creation
+  createMagneticCollector(
+    position: Vector2,
+    magnetRange: number,
+    magnetStrength: number,
+    fieldType: string
+  ): EntityId;
+  
+  // Collection chains
+  createCollectibleChain(
+    positions: Vector2[],
+    collectibleType: CollectibleType,
+    value: number,
+    chainBonus?: number
+  ): EntityId[];
+  
+  // Magnet activation
+  activateMagnet(entityId: EntityId, currentTime?: number): boolean;
+  triggerMagnetActivation(entityId: EntityId, trigger: MagnetTrigger): void;
+  
+  // Statistics
+  getCollectionStats(entityId: EntityId): {
+    totalCollected: number;
+    totalValue: number;
+    collectionRate: number;
+    activeCollectibles: number;
+    collectedByType: Map<CollectibleType, number>;
+  };
+  
+  getStats(): {
+    totalCollected: number;
+    totalValue: number;
+    collectionsByType: Map<CollectibleType, number>;
+    averageCollectionTime: number;
+    chainCompletions: number;
+  };
 }
 
 // Usage
 const collectionSystem = new CollectionSystem(events, world);
 world.addSystem(collectionSystem);
+
+// Create collectibles
+const goldCoin = collectionSystem.createCollectible(
+  { x: 100, y: 100 },
+  CollectibleType.CURRENCY,
+  CollectibleRarity.COMMON,
+  10,
+  ['coin']
+);
+
+// Create experience chain
+const expChain = collectionSystem.createCollectibleChain(
+  [
+    { x: 200, y: 200 },
+    { x: 220, y: 200 },
+    { x: 240, y: 200 }
+  ],
+  CollectibleType.EXPERIENCE,
+  25,
+  0.1 // 10% bonus per item in chain
+);
+
+// Manual magnet activation
+events.on('ENEMY_KILLED', (event) => {
+  // Trigger magnet on kill
+  collectionSystem.triggerMagnetActivation(
+    event.data.killerId,
+    MagnetTrigger.ON_KILL
+  );
+});
+
+// Monitor collection statistics
+setInterval(() => {
+  const stats = collectionSystem.getCollectionStats(playerId);
+  console.log(`Collected: ${stats.totalCollected} items worth ${stats.totalValue}`);
+}, 1000);
 ```
 
 ### Skill System
@@ -769,6 +1198,103 @@ world.addSystem(skillSystem);
 
 // Activate skill
 skillSystem.activateSkill(playerId, 'fireball', { x: 200, y: 150 });
+```
+
+### Difficulty System
+
+Manages dynamic difficulty scaling and adaptive gameplay balancing.
+
+```typescript
+import { DifficultySystem, DifficultyLevel, ScalingMetric } from 'vital-engine-sdk';
+
+class DifficultySystem extends System {
+  readonly name = 'difficulty';
+  readonly requiredComponents = ['difficulty'];
+  
+  constructor(world?: World, eventSystem?: EventSystem);
+  
+  update(context: SystemUpdateContext): void;
+  
+  // Player action recording
+  recordPlayerAction(
+    entityId: EntityId,
+    metric: ScalingMetric,
+    value: number,
+    isIncrement?: boolean
+  ): void;
+  
+  // Difficulty management
+  setDifficultyLevel(entityId: EntityId, level: DifficultyLevel): boolean;
+  enableAdaptiveDifficulty(entityId: EntityId, enabled: boolean): boolean;
+  
+  // Configuration
+  configureAdaptiveSettings(
+    entityId: EntityId,
+    settings: Partial<AdaptiveSettings>
+  ): boolean;
+  
+  // Statistics
+  getDifficultyStats(entityId: EntityId): {
+    currentLevel: DifficultyLevel;
+    currentScore: number;
+    targetScore: number;
+    performanceScore: number;
+    isStabilized: boolean;
+    adaptiveEnabled: boolean;
+    performanceHistory: number[];
+    activeModifiers: string[];
+  } | null;
+  
+  // Entity creation
+  createDifficultyManager(adaptiveEnabled?: boolean): EntityId;
+  
+  // Custom modifiers
+  addCustomModifier(
+    entityId: EntityId,
+    modifier: DifficultyModifier,
+    targetLevel?: DifficultyLevel
+  ): boolean;
+  
+  removeCustomModifier(entityId: EntityId, modifierId: string): boolean;
+}
+
+// Types
+type DifficultyLevel = 'EASY' | 'NORMAL' | 'HARD' | 'EXTREME' | 'NIGHTMARE';
+
+type ScalingMetric = 
+  | 'SURVIVAL_TIME'
+  | 'PLAYER_LEVEL'
+  | 'ENEMIES_KILLED'
+  | 'DAMAGE_DEALT'
+  | 'DAMAGE_TAKEN'
+  | 'SCORE'
+  | 'COLLECTION_RATE';
+
+// Usage
+const difficultySystem = new DifficultySystem(world, events);
+world.addSystem(difficultySystem);
+
+// Create difficulty manager
+const difficultyManager = difficultySystem.createDifficultyManager(true);
+
+// Configure adaptive difficulty
+difficultySystem.configureAdaptiveSettings(difficultyManager, {
+  adaptationRate: 0.1,
+  adaptationInterval: 5000,
+  targetPerformanceRange: { min: 0.6, max: 0.8 }
+});
+
+// Record player performance
+events.on('ENTITY_KILLED', (event) => {
+  if (event.data.killerId === playerId) {
+    difficultySystem.recordPlayerAction(difficultyManager, 'ENEMIES_KILLED', 1, true);
+  }
+});
+
+// Monitor difficulty changes
+events.on('difficulty_changed', (event) => {
+  console.log(`Difficulty changed from ${event.oldLevel} to ${event.newLevel}`);
+});
 ```
 
 ## Event System
@@ -826,7 +1352,10 @@ enum GameEventType {
   
   // Entity events
   ENTITY_CREATED = 'ENTITY_CREATED',
-  ENTITY_DESTROYED = 'ENTITY_DESTROYED'
+  ENTITY_DESTROYED = 'ENTITY_DESTROYED',
+  
+  // Difficulty events
+  DIFFICULTY_CHANGED = 'DIFFICULTY_CHANGED'
 }
 ```
 
@@ -847,8 +1376,29 @@ events.on(GameEventType.ITEM_COLLECTED, (event) => {
   console.log(`Collected ${event.data.quantity}x ${event.data.itemType}`);
 });
 
+events.on(GameEventType.DIFFICULTY_CHANGED, (event: DifficultyChangedEvent) => {
+  console.log(`Difficulty: ${event.oldLevel} -> ${event.newLevel}`);
+  console.log(`Performance score: ${event.performanceScore}`);
+});
+
 // Emit custom events
 events.emit('CUSTOM_EVENT', { customData: 'value' });
+```
+
+### Event Data Interfaces
+
+```typescript
+// Difficulty change event
+interface DifficultyChangedEvent {
+  type: 'difficulty_changed';
+  timestamp: number;
+  entityId: EntityId;
+  oldLevel: DifficultyLevel;
+  newLevel: DifficultyLevel;
+  currentScore: number;
+  performanceScore: number;
+  isAdaptive: boolean;
+}
 ```
 
 ## Types
