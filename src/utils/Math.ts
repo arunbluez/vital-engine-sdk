@@ -1,4 +1,5 @@
 import type { Vector2, Circle, Rectangle } from '../types/GameTypes'
+import { DMath } from '../math/DMath'
 
 export type { Vector2, Circle, Rectangle }
 
@@ -84,6 +85,33 @@ export class Vector2Math {
       x: v.x * cos - v.y * sin,
       y: v.x * sin + v.y * cos,
     }
+  }
+
+  /**
+   * Deterministic rotation using DMath — bit-identical across JS engines.
+   * Prefer this over `rotate` in simulation code paths.
+   */
+  static rotateD(v: Vector2, angle: number): Vector2 {
+    const cos = DMath.cos(angle)
+    const sin = DMath.sin(angle)
+    return {
+      x: v.x * cos - v.y * sin,
+      y: v.x * sin + v.y * cos,
+    }
+  }
+
+  /**
+   * Deterministic angle of a vector using DMath (cross-platform consistent).
+   */
+  static angleD(v: Vector2): number {
+    return DMath.atan2(v.y, v.x)
+  }
+
+  /**
+   * Deterministic angle between two points using DMath.
+   */
+  static angleBetweenD(a: Vector2, b: Vector2): number {
+    return DMath.atan2(b.y - a.y, b.x - a.x)
   }
 
   static lerp(a: Vector2, b: Vector2, t: number): Vector2 {
@@ -203,12 +231,20 @@ export class MathUtils {
     return degrees * (Math.PI / 180)
   }
 
-  static randomRange(min: number, max: number): number {
-    return Math.random() * (max - min) + min
+  /**
+   * Float in [min, max). Requires an injected source of randomness in [0, 1)
+   * (e.g. a `RandomService.next` bound function) — `Math.random` is banned in
+   * `src/` because it is unseedable and breaks determinism.
+   */
+  static randomRange(next: () => number, min: number, max: number): number {
+    return next() * (max - min) + min
   }
 
-  static randomInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min
+  /**
+   * Integer in [min, max] inclusive, from an injected randomness source.
+   */
+  static randomInt(next: () => number, min: number, max: number): number {
+    return Math.floor(next() * (max - min + 1)) + min
   }
 
   static isPowerOfTwo(value: number): boolean {

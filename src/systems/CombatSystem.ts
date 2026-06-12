@@ -1,4 +1,5 @@
 import { System } from '../core/ECS/System'
+import { RandomService } from '../core/RandomService'
 import type {
   EntityQuery,
   SystemUpdateContext,
@@ -34,11 +35,14 @@ export class CombatSystem extends System {
 
   private eventSystem?: any
   private world?: any
+  private random: RandomService
 
-  constructor(eventSystem?: any, world?: any) {
+  constructor(eventSystem?: any, world?: any, random?: RandomService) {
     super()
     this.eventSystem = eventSystem
     this.world = world
+    // Inject a seeded stream for crit rolls; defaults to a deterministic seed.
+    this.random = random ?? new RandomService(0)
   }
 
   update(context: SystemUpdateContext, entities: EntityQuery[]): void {
@@ -179,8 +183,8 @@ export class CombatSystem extends System {
     const combat = attacker.components.combat
     const targetHealth = targetEntity.getComponent('health') as HealthComponent
 
-    // Calculate damage
-    const damage = combat.calculateDamage()
+    // Calculate damage (crit rolls drawn from the injected deterministic stream)
+    const damage = combat.calculateDamage(this.random)
 
     // Deal damage
     const actualDamage = targetHealth.takeDamage(damage, currentTime)

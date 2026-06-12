@@ -26,7 +26,15 @@
     "@typescript-eslint/prefer-nullish-coalescing": "error",
     "@typescript-eslint/prefer-optional-chain": "error",
     "no-console": "warn",
-    "no-debugger": "error"
+    "no-debugger": "error",
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "Math",
+        "property": "random",
+        "message": "Math.random() is banned in src/ — it is unseedable and breaks determinism. Use the seeded RandomService instead."
+      }
+    ]
   },
   "env": {
     "node": true,

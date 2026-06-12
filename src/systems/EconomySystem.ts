@@ -1,4 +1,5 @@
 import { System } from '../core/ECS/System'
+import { RandomService } from '../core/RandomService'
 import type {
   EntityQuery,
   SystemUpdateContext,
@@ -37,11 +38,14 @@ export class EconomySystem extends System {
   private world?: any
   private resourceDrops: Map<string, ResourceDrop[]> = new Map()
   private shopItems: Map<string, ShopItem> = new Map()
+  private random: RandomService
 
-  constructor(eventSystem?: any, world?: any) {
+  constructor(eventSystem?: any, world?: any, random?: RandomService) {
     super()
     this.eventSystem = eventSystem
     this.world = world
+    // Deterministic stream for drop-chance rolls.
+    this.random = random ?? new RandomService(0)
     this.initializeDropTables()
   }
 
@@ -108,7 +112,7 @@ export class EconomySystem extends System {
     const droppedItems: ItemStack[] = []
 
     drops.forEach((drop) => {
-      if (Math.random() < drop.chance) {
+      if (this.random.chance(drop.chance)) {
         const success = entity.components.inventory.addResource(
           drop.type,
           drop.amount

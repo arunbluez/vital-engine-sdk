@@ -1,5 +1,13 @@
 import { Component } from '../core/ECS/Component'
+import { RandomService } from '../core/RandomService'
 import type { EntityId } from '../types/CoreTypes'
+
+/**
+ * Fallback deterministic PRNG used when no stream is injected. Shared at module
+ * scope so successive crit rolls advance rather than repeating. For full
+ * end-to-end determinism, systems inject their own seeded stream.
+ */
+const defaultCombatRandom = new RandomService(0)
 
 export interface WeaponStats {
   damage: number
@@ -61,12 +69,12 @@ export class CombatComponent extends Component {
   /**
    * Calculates damage with critical hit chance
    */
-  calculateDamage(): number {
+  calculateDamage(random: RandomService = defaultCombatRandom): number {
     let damage = this.weapon.damage
 
     // Apply critical hit
     if (this.weapon.criticalChance && this.weapon.criticalMultiplier) {
-      if (Math.random() < this.weapon.criticalChance) {
+      if (random.chance(this.weapon.criticalChance)) {
         damage *= this.weapon.criticalMultiplier
       }
     }

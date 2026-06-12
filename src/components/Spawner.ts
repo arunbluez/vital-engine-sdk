@@ -1,6 +1,13 @@
 import { Component } from '../core/ECS/Component'
+import { RandomService } from '../core/RandomService'
 import type { EntityId } from '../types/CoreTypes'
 import type { Vector2 } from '../utils/Math'
+
+/**
+ * Fallback deterministic PRNG for spawn rolls when no stream is injected.
+ * Systems inject their own seeded stream via `setRandom` for full determinism.
+ */
+const defaultSpawnerRandom = new RandomService(0)
 
 /**
  * Spawn pattern types
@@ -170,10 +177,20 @@ export class SpawnerComponent extends Component {
   public lastUpdateTime: number = 0
   public spawnBudget: number = 5 // Max spawns per update cycle
 
+  // Deterministic PRNG for all spawn rolls (positions, type selection, jitter).
+  private random: RandomService = defaultSpawnerRandom
+
   constructor(spawnArea: SpawnArea) {
     super()
     this.spawnArea = spawnArea
     this.calculateNextSpawnTime()
+  }
+
+  /**
+   * Injects the deterministic random stream used for spawn rolls.
+   */
+  setRandom(random: RandomService): void {
+    this.random = random
   }
 
   /**
@@ -345,7 +362,7 @@ export class SpawnerComponent extends Component {
     }
 
     const totalWeight = validTypes.reduce((sum, type) => sum + type.weight, 0)
-    let random = Math.random() * totalWeight
+    let random = this.random.next() * totalWeight
 
     for (const type of validTypes) {
       random -= type.weight
@@ -393,8 +410,8 @@ export class SpawnerComponent extends Component {
    */
   private randomPositionInArea(area: SpawnArea): Vector2 {
     if (area.radius) {
-      const angle = Math.random() * Math.PI * 2
-      const distance = Math.random() * area.radius
+      const angle = this.random.next() * Math.PI * 2
+      const distance = this.random.next() * area.radius
       return {
         x: area.center.x + Math.cos(angle) * distance,
         y: area.center.y + Math.sin(angle) * distance,
@@ -404,8 +421,8 @@ export class SpawnerComponent extends Component {
     const width = area.width || 100
     const height = area.height || 100
     return {
-      x: area.center.x + (Math.random() - 0.5) * width,
-      y: area.center.y + (Math.random() - 0.5) * height,
+      x: area.center.x + (this.random.next() - 0.5) * width,
+      y: area.center.y + (this.random.next() - 0.5) * height,
     }
   }
 
@@ -413,7 +430,7 @@ export class SpawnerComponent extends Component {
    * Circular spawn position (around perimeter)
    */
   private circularSpawnPosition(area: SpawnArea): Vector2 {
-    const angle = Math.random() * Math.PI * 2
+    const angle = this.random.next() * Math.PI * 2
     const radius = area.radius || 100
     return {
       x: area.center.x + Math.cos(angle) * radius,
@@ -427,28 +444,28 @@ export class SpawnerComponent extends Component {
   private perimeterSpawnPosition(area: SpawnArea): Vector2 {
     const width = area.width || 200
     const height = area.height || 200
-    const side = Math.floor(Math.random() * 4)
+    const side = Math.floor(this.random.next() * 4)
 
     switch (side) {
       case 0: // Top
         return {
-          x: area.center.x + (Math.random() - 0.5) * width,
+          x: area.center.x + (this.random.next() - 0.5) * width,
           y: area.center.y - height / 2,
         }
       case 1: // Right
         return {
           x: area.center.x + width / 2,
-          y: area.center.y + (Math.random() - 0.5) * height,
+          y: area.center.y + (this.random.next() - 0.5) * height,
         }
       case 2: // Bottom
         return {
-          x: area.center.x + (Math.random() - 0.5) * width,
+          x: area.center.x + (this.random.next() - 0.5) * width,
           y: area.center.y + height / 2,
         }
       case 3: // Left
         return {
           x: area.center.x - width / 2,
-          y: area.center.y + (Math.random() - 0.5) * height,
+          y: area.center.y + (this.random.next() - 0.5) * height,
         }
       default:
         return { ...area.center }
@@ -460,7 +477,7 @@ export class SpawnerComponent extends Component {
    */
   private lineSpawnPosition(area: SpawnArea): Vector2 {
     const width = area.width || 100
-    const offset = (Math.random() - 0.5) * width
+    const offset = (this.random.next() - 0.5) * width
     return {
       x: area.center.x + offset,
       y: area.center.y,
@@ -475,8 +492,8 @@ export class SpawnerComponent extends Component {
     const height = area.height || 100
     const gridSize = 5
 
-    const gridX = Math.floor(Math.random() * gridSize)
-    const gridY = Math.floor(Math.random() * gridSize)
+    const gridX = Math.floor(this.random.next() * gridSize)
+    const gridY = Math.floor(this.random.next() * gridSize)
 
     return {
       x: area.center.x - width / 2 + (gridX / (gridSize - 1)) * width,
@@ -489,7 +506,7 @@ export class SpawnerComponent extends Component {
    */
   private portalSpawnPosition(area: SpawnArea): Vector2 {
     if (area.points && area.points.length > 0) {
-      const randomIndex = Math.floor(Math.random() * area.points.length)
+      const randomIndex = Math.floor(this.random.next() * area.points.length)
       return { ...area.points[randomIndex] }
     }
     return { ...area.center }
@@ -500,7 +517,7 @@ export class SpawnerComponent extends Component {
    */
   calculateNextSpawnTime(): void {
     const baseInterval = 1000 / this.currentSpawnRate
-    const jitter = baseInterval * 0.2 * (Math.random() - 0.5) // ±10% jitter
+    const jitter = baseInterval * 0.2 * (this.random.next() - 0.5) // ±10% jitter
     this.nextSpawnTime = this.lastSpawnTime + baseInterval + jitter
   }
 

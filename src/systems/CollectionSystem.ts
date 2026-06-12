@@ -42,7 +42,9 @@ export class CollectionSystem extends System {
   private world: World
   private eventSystem?: any
   private spatialGrid: SpatialHashGrid
-  
+  // Monotonic counter for deterministic chain ids (replaces Date.now/Math.random).
+  private chainCounter: number = 0
+
   // Performance optimization
   private collectibleCache: Map<EntityId, {
     entity: Entity
@@ -846,7 +848,7 @@ export class CollectionSystem extends System {
     value: number,
     chainBonus: number = 0.1
   ): EntityId[] {
-    const chainId = `chain_${Date.now()}_${Math.random()}`
+    const chainId = `chain_${this.chainCounter++}`
     const createdIds: EntityId[] = []
     
     for (let i = 0; i < positions.length; i++) {

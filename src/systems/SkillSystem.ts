@@ -1,4 +1,5 @@
 import { System } from '../core/ECS/System'
+import { RandomService } from '../core/RandomService'
 import type { World } from '../core/ECS/World'
 import type {
   EntityId,
@@ -64,14 +65,17 @@ export class SkillSystem extends System {
   private evolutionDefinitions: Map<string, EvolutionOption> = new Map()
   private lastEvolutionCheck: number = 0
   private currentGameTime: number = 0
-  private rng: () => number
+  private random: RandomService
+  // Monotonic counter for deterministic active-effect ids.
+  private effectCounter: number = 0
 
   constructor(world: World, config: SkillSystemConfig) {
     super()
     this.world = world
     this.config = config
     this.eventSystem = config.eventSystem
-    this.rng = this.createSeededRandom(config.skillSelectionSeed || Date.now())
+    // Seeded deterministic PRNG (replaces the previous wall-clock default).
+    this.random = new RandomService(config.skillSelectionSeed ?? 0)
     this.initializeEvolutionDefinitions()
   }
 
@@ -99,17 +103,6 @@ export class SkillSystem extends System {
       },
       priority: 1,
     })
-  }
-
-  /**
-   * Create a seeded random number generator
-   */
-  private createSeededRandom(seed: number): () => number {
-    let state = seed
-    return () => {
-      state = (state * 9301 + 49297) % 233280
-      return state / 233280
-    }
   }
 
   update(context: SystemUpdateContext, entities: EntityQuery[]): void {
@@ -372,7 +365,7 @@ export class SkillSystem extends System {
     gameTime: number
   ): void {
     // Check chance
-    if (effect.chance && this.rng() > effect.chance) return
+    if (effect.chance && this.random.next() > effect.chance) return
 
     const targetEntity = this.world.getEntity(targetId)
     if (!targetEntity) return
@@ -471,7 +464,7 @@ export class SkillSystem extends System {
     if (!skills) return
 
     const activeEffect: ActiveEffect = {
-      id: `${skillId}_${gameTime}_${Math.random()}`,
+      id: `${skillId}_${gameTime}_${this.effectCounter++}`,
       skillId,
       sourceEntityId: sourceId,
       effect,
@@ -756,7 +749,7 @@ export class SkillSystem extends System {
     const totalWeight = weights.reduce((sum, w) => sum + w, 0)
     if (totalWeight === 0) return -1
 
-    const random = this.rng() * totalWeight
+    const random = this.random.next() * totalWeight
     let accumulator = 0
 
     for (let i = 0; i < weights.length; i++) {

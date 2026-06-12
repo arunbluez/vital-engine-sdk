@@ -36,6 +36,17 @@ export interface EngineConfig {
   enableEventHistory?: boolean
   eventHistorySize?: number
   debug?: boolean
+  /**
+   * Seed for the deterministic PRNG. Identical seeds reproduce identical
+   * random sequences across runs and platforms. Defaults to a fixed value so
+   * the engine is deterministic out of the box.
+   */
+  seed?: number
+  /**
+   * Simulation logic rate in ticks per second (fixed timestep). Defaults to
+   * 30. Render can run faster with interpolation.
+   */
+  tickRate?: number
 }
 
 export interface GameConfig {

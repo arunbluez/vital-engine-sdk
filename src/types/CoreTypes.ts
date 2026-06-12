@@ -59,6 +59,17 @@ export interface SystemUpdateContext {
   totalTime: number
   frameCount: number
   timestamp?: number
+  /**
+   * Current simulation tick (integer). Deterministic — derived from the
+   * SimulationClock, not wall-clock time. Prefer this over `timestamp` for
+   * any game-logic timing.
+   */
+  tick?: number
+  /**
+   * Simulation time in milliseconds, derived as `tick * fixedDeltaMs`.
+   * Deterministic and platform-independent.
+   */
+  simTimeMs?: number
 }
 
 export interface System {

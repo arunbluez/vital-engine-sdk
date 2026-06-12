@@ -1,4 +1,5 @@
 import { System } from '../core/ECS/System'
+import { RandomService } from '../core/RandomService'
 import type {
   EntityQuery,
   SystemUpdateContext,
@@ -100,6 +101,9 @@ export class SpawnSystem extends System {
   private activeBosses: Map<EntityId, string> = new Map()
   private bossPhaseTransitions: Map<EntityId, number> = new Map()
 
+  // Deterministic PRNG injected into spawner components.
+  private random: RandomService
+
   constructor(
     spatialGrid: SpatialHashGrid,
     config: Partial<SpawnSystemConfig> = {},
@@ -115,10 +119,12 @@ export class SpawnSystem extends System {
       getEntity?: (id: EntityId) => any
       getEntitiesWithComponents: (components: string[]) => unknown[]
       removeEntity: (id: EntityId) => void
-    }
+    },
+    random?: RandomService
   ) {
     super()
     this.spatialGrid = spatialGrid
+    this.random = random ?? new RandomService(0)
     this.eventSystem = eventSystem
     this.world = world
 
@@ -199,6 +205,7 @@ export class SpawnSystem extends System {
     context: SystemUpdateContext
   ): void {
     const spawnerComponent = spawner.components.spawner
+    spawnerComponent.setRandom(this.random)
 
     if (!spawnerComponent.active) return
 
@@ -246,6 +253,7 @@ export class SpawnSystem extends System {
     currentTime: number
   ): void {
     const spawnerComponent = spawner.components.spawner
+    spawnerComponent.setRandom(this.random)
 
     // Check global limits
     if (this.globalEnemyCount >= this.config.maxGlobalEnemies) return
@@ -304,6 +312,7 @@ export class SpawnSystem extends System {
     currentTime: number
   ): void {
     const spawnerComponent = spawner.components.spawner
+    spawnerComponent.setRandom(this.random)
 
     // Check if boss already exists
     if (

@@ -17,7 +17,15 @@ export {
   EventSystem,
   Engine,
   createEngine,
+  // Determinism core
+  RandomService,
+  SimulationClock,
+  StateHasher,
 } from './core'
+export type { HashableWorld, HashableEntity } from './core'
+
+// Deterministic math layer
+export { DMath } from './math'
 
 // Game systems
 export {

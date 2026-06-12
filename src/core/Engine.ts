@@ -1,5 +1,7 @@
 import { World } from './ECS/World'
 import { EventSystem } from './EventSystem'
+import { RandomService } from './RandomService'
+import type { SimulationClock } from './SimulationClock'
 import { PerformanceMonitor } from './PerformanceMonitor'
 import { globalProfiler } from './Profiler'
 import { globalMemoryManager, initializeCommonPools } from '../utils'
@@ -25,10 +27,14 @@ export class Engine {
   private animationFrameId: NodeJS.Timeout | number | null = null
   private lastUpdateTime: number = 0
   private accumulator: number = 0
+  private random: RandomService
 
   constructor(config: GameConfig = {}) {
-    this.world = new World()
+    this.world = new World(config.engine?.tickRate ?? 30)
     this.eventSystem = new EventSystem()
+    // Root deterministic PRNG. Defaults to a fixed seed so the engine is
+    // deterministic out of the box.
+    this.random = new RandomService(config.engine?.seed ?? 0)
     this.performanceMonitor = new PerformanceMonitor({
       targetFPS: config.engine?.targetFPS ?? 60,
       minFPS: 30,
@@ -44,6 +50,8 @@ export class Engine {
       enableEventHistory: false,
       eventHistorySize: 1000,
       debug: false,
+      seed: 0,
+      tickRate: 30,
       ...config.engine,
     }
 
@@ -94,6 +102,23 @@ export class Engine {
    */
   getEvents(): EventSystem {
     return this.eventSystem
+  }
+
+  /**
+   * Gets the seeded deterministic PRNG. With no argument returns the root
+   * stream; with a `streamId` returns a memoized independent child stream
+   * (e.g. 'combat', 'spawn', 'loot'). Decoupling streams keeps consumption
+   * order in one domain from shifting another's sequence.
+   */
+  getRandom(streamId?: string): RandomService {
+    return streamId ? this.random.fork(streamId) : this.random
+  }
+
+  /**
+   * Gets the deterministic simulation clock (tick / simTimeMs).
+   */
+  getClock(): SimulationClock {
+    return this.world.getClock()
   }
 
   /**
@@ -301,6 +326,9 @@ export class Engine {
 
     this.accumulator = 0
     this.updateCallbacks.clear()
+
+    // Re-seed the PRNG so a reset run reproduces the original sequence.
+    this.random = new RandomService(this.config.seed)
   }
 
   /**

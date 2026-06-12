@@ -11,6 +11,7 @@ import type { System } from './System'
 import type { Component } from './Component'
 import { ObjectPool, type PoolFactory } from '../../utils/Pooling'
 import { globalProfiler } from '../Profiler'
+import { SimulationClock } from '../SimulationClock'
 
 /**
  * World class that manages all entities and systems in the ECS architecture.
@@ -25,8 +26,15 @@ export class World {
   private totalTime: number = 0
   private entityPool: ObjectPool<Entity>
   private recycledIds: EntityId[] = []
+  // Per-world entity id counter. Deterministic and independent of any other
+  // world, so the same simulation always assigns the same ids — a precondition
+  // for reproducible state hashes.
+  private nextEntityId: EntityId = 1
+  private clock: SimulationClock
 
-  constructor() {
+  constructor(tickRate: number = 30) {
+    this.clock = new SimulationClock(tickRate)
+
     // Initialize entity pool
     const entityFactory: PoolFactory<Entity> = {
       create: () => new Entity(),
@@ -55,7 +63,7 @@ export class World {
       const recycledId = this.recycledIds.pop()!
       entity.setId(recycledId)
     } else {
-      entity.setId(Entity.generateId())
+      entity.setId(this.nextEntityId++)
     }
 
     this.entities.set(entity.id, entity)
@@ -171,6 +179,13 @@ export class World {
   }
 
   /**
+   * Gets the deterministic simulation clock driving this world.
+   */
+  getClock(): SimulationClock {
+    return this.clock
+  }
+
+  /**
    * Updates all systems
    */
   update(deltaTime: number): void {
@@ -181,7 +196,10 @@ export class World {
       deltaTime,
       totalTime: this.totalTime,
       frameCount: this.frameCount,
+      tick: this.clock.tick,
+      simTimeMs: this.clock.simTimeMs,
     }
+    this.clock.advance()
 
     // Update entity queries
     globalProfiler.beginMark('world.updateQueries')
@@ -351,8 +369,10 @@ export class World {
     this.systems.clear()
     this.entityQueries.clear()
     this.recycledIds.length = 0
+    this.nextEntityId = 1
     this.frameCount = 0
     this.totalTime = 0
+    this.clock.reset()
   }
 
   /**
