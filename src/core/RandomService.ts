@@ -133,6 +133,22 @@ export class RandomService {
   }
 
   /**
+   * Returns this stream's state followed by every child stream's state, with
+   * forks visited in sorted streamId order. Canonical and deterministic — used
+   * to fold all randomness into a state hash.
+   */
+  getStreamStates(): number[] {
+    const states: number[] = [this.state]
+    for (const key of [...this.forks.keys()].sort()) {
+      const child = this.forks.get(key)
+      if (child) {
+        states.push(...child.getStreamStates())
+      }
+    }
+    return states
+  }
+
+  /**
    * Serializes the internal state for snapshots. Pairs with `setState`.
    */
   getState(): number {

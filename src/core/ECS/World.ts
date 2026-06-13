@@ -12,6 +12,9 @@ import type { Component } from './Component'
 import { ObjectPool, type PoolFactory } from '../../utils/Pooling'
 import { globalProfiler } from '../Profiler'
 import { SimulationClock } from '../SimulationClock'
+import type { InputCommand } from '../../input/InputCommand'
+
+const NO_COMMANDS: InputCommand[] = []
 
 /**
  * World class that manages all entities and systems in the ECS architecture.
@@ -31,6 +34,8 @@ export class World {
   // for reproducible state hashes.
   private nextEntityId: EntityId = 1
   private clock: SimulationClock
+  // Input commands applied during the current step (see `step`).
+  private currentCommands: InputCommand[] = NO_COMMANDS
 
   constructor(tickRate: number = 30) {
     this.clock = new SimulationClock(tickRate)
@@ -186,6 +191,34 @@ export class World {
   }
 
   /**
+   * Advances the simulation by exactly one fixed tick, applying the given
+   * input commands. This is the deterministic core: the same world stepped
+   * with the same commands always produces the same state.
+   */
+  step(commands: InputCommand[] = NO_COMMANDS): void {
+    this.currentCommands = commands
+    this.update(this.clock.fixedDeltaMs)
+    this.currentCommands = NO_COMMANDS
+  }
+
+  /**
+   * Advances the simulation by `count` fixed ticks. Optionally supplies the
+   * commands for each tick via a callback keyed by the (pre-step) tick index.
+   * Convenience for headless / replay simulation.
+   */
+  stepN(
+    count: number,
+    commandsForTick?: (tick: number) => InputCommand[]
+  ): void {
+    for (let i = 0; i < count; i++) {
+      const commands = commandsForTick
+        ? commandsForTick(this.clock.tick)
+        : NO_COMMANDS
+      this.step(commands)
+    }
+  }
+
+  /**
    * Updates all systems
    */
   update(deltaTime: number): void {
@@ -198,6 +231,7 @@ export class World {
       frameCount: this.frameCount,
       tick: this.clock.tick,
       simTimeMs: this.clock.simTimeMs,
+      inputCommands: this.currentCommands,
     }
     this.clock.advance()
 

@@ -683,4 +683,57 @@ When running this frontend test, you should see:
 4. **Use frontend testing** to guide Phase 3 feature design
 5. **Keep the frontend simple** - focus on validating the SDK, not building a full game
 
+## Deterministic Input & Loop (required for replays)
+
+To keep the simulation deterministic, **do not mutate component state from
+input handlers**. Route every input through the engine's `InputQueue`, which
+stamps commands with a tick and applies them at the next tick boundary. Analog
+inputs are quantized automatically.
+
+```ts
+// ❌ Old (non-deterministic): mutating velocity directly from an input event
+movement.setVelocity(dx * speed, dy * speed)
+
+// ✅ New: enqueue a tick-stamped command; the PlayerControllerSystem applies it
+engine.enqueueInput({ type: 'MOVE', dx, dy })          // analog stick
+engine.enqueueInput({ type: 'SKILL_PICK', optionIndex: 0 })
+```
+
+Tag the player entity so the built-in `PlayerControllerSystem` knows what to
+drive:
+
+```ts
+import { PlayerControllerSystem, PlayerControllerComponent } from 'vital-engine-sdk'
+
+world.addSystem(new PlayerControllerSystem()) // register first (input-apply)
+player.addComponent(new PlayerControllerComponent(/* moveSpeed */ 200))
+```
+
+### The render loop (accumulator pattern)
+
+Simulation runs at a fixed tick rate; render as fast as you like and interpolate
+between the last two states using the interpolation alpha:
+
+```ts
+let lastTime = performance.now()
+let accumulator = 0
+const fixedDeltaMs = 1000 / engine.getTickRate()
+
+function frame(now: number) {
+  accumulator += Math.min(now - lastTime, 100) // clamp to avoid spiral of death
+  lastTime = now
+  while (accumulator >= fixedDeltaMs) {
+    engine.step()                // flush input + advance one deterministic tick
+    accumulator -= fixedDeltaMs
+  }
+  const alpha = accumulator / fixedDeltaMs // engine.getInterpolationAlpha()
+  render(world, alpha)           // interpolate rendered positions by `alpha`
+  requestAnimationFrame(frame)
+}
+requestAnimationFrame(frame)
+```
+
+`engine.start()` already implements this loop internally — use it directly, or
+drive `engine.step()` yourself for full control (e.g. headless/server use).
+
 This approach will give you confidence that the SDK is working correctly and help identify any API improvements before building the more complex Phase 3 features.

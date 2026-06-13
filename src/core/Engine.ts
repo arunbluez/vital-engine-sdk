@@ -1,7 +1,10 @@
 import { World } from './ECS/World'
 import { EventSystem } from './EventSystem'
 import { RandomService } from './RandomService'
+import { StateHasher } from './StateHasher'
 import type { SimulationClock } from './SimulationClock'
+import { InputQueue } from '../input/InputQueue'
+import type { UnstampedInputCommand } from '../input/InputCommand'
 import { PerformanceMonitor } from './PerformanceMonitor'
 import { globalProfiler } from './Profiler'
 import { globalMemoryManager, initializeCommonPools } from '../utils'
@@ -28,6 +31,8 @@ export class Engine {
   private lastUpdateTime: number = 0
   private accumulator: number = 0
   private random: RandomService
+  private inputQueue: InputQueue = new InputQueue()
+  private hashTraceInterval: number = 0
 
   constructor(config: GameConfig = {}) {
     this.world = new World(config.engine?.tickRate ?? 30)
@@ -52,6 +57,7 @@ export class Engine {
       debug: false,
       seed: 0,
       tickRate: 30,
+      configVersion: '1.0.0',
       ...config.engine,
     }
 
@@ -119,6 +125,109 @@ export class Engine {
    */
   getClock(): SimulationClock {
     return this.world.getClock()
+  }
+
+  /**
+   * Gets the input command queue. Frontends enqueue commands here instead of
+   * mutating component state directly.
+   */
+  getInputQueue(): InputQueue {
+    return this.inputQueue
+  }
+
+  /**
+   * Convenience: enqueue an input command for the next tick boundary.
+   */
+  enqueueInput(command: UnstampedInputCommand): void {
+    this.inputQueue.enqueue(command)
+  }
+
+  /**
+   * The seed this engine was constructed with.
+   */
+  getSeed(): number {
+    return this.config.seed
+  }
+
+  /**
+   * The game balance/config version (replay determinism gate).
+   */
+  getConfigVersion(): string {
+    return this.config.configVersion
+  }
+
+  /**
+   * Simulation tick rate (ticks per second).
+   */
+  getTickRate(): number {
+    return this.config.tickRate
+  }
+
+  /**
+   * Render interpolation factor in [0, 1): how far the accumulator is between
+   * the last simulated tick and the next. Use to interpolate rendered
+   * positions when rendering faster than the simulation rate.
+   */
+  getInterpolationAlpha(): number {
+    return this.accumulator / this.getClock().fixedDeltaMs
+  }
+
+  /**
+   * Advances the simulation by exactly one fixed tick: flushes the input queue
+   * for the current tick, applies the commands, and steps the world. This is
+   * the deterministic stepping primitive used by headless simulation and
+   * replay.
+   */
+  step(): void {
+    const tick = this.getClock().tick
+    const commands = this.inputQueue.flush(tick)
+    this.world.step(commands)
+    // Inputs captured from here on target the upcoming tick boundary.
+    this.inputQueue.advanceStampTo(this.getClock().tick)
+
+    this.state.deltaTime = this.getClock().fixedDeltaMs
+    this.state.currentTime = this.getClock().simTimeMs
+    this.state.frameCount = this.getClock().tick
+
+    if (
+      this.hashTraceInterval > 0 &&
+      this.getClock().tick % this.hashTraceInterval === 0
+    ) {
+      this.eventSystem.emit('STATE_HASH', {
+        tick: this.getClock().tick,
+        hash: this.computeStateHash(),
+      })
+    }
+
+    this.updateCallbacks.forEach((callback) => {
+      callback(this.getClock().fixedDeltaMs)
+    })
+  }
+
+  /**
+   * Advances the simulation by `count` fixed ticks (headless convenience).
+   */
+  stepN(count: number): void {
+    for (let i = 0; i < count; i++) {
+      this.step()
+    }
+  }
+
+  /**
+   * Computes a canonical hash of the current world state, folding in every
+   * PRNG stream's state. Used for replay verification and desync detection.
+   */
+  computeStateHash(): string {
+    return StateHasher.hash(this.world, this.random.getStreamStates())
+  }
+
+  /**
+   * Enables periodic state-hash tracing: every `everyNTicks` ticks the engine
+   * emits a `STATE_HASH` event `{ tick, hash }`. Comparing two runs' traces
+   * localizes a divergence to the exact tick. Pass 0 to disable.
+   */
+  enableHashTrace(everyNTicks: number): void {
+    this.hashTraceInterval = Math.max(0, Math.floor(everyNTicks))
   }
 
   /**
@@ -326,6 +435,7 @@ export class Engine {
 
     this.accumulator = 0
     this.updateCallbacks.clear()
+    this.inputQueue.clear()
 
     // Re-seed the PRNG so a reset run reproduces the original sequence.
     this.random = new RandomService(this.config.seed)
@@ -423,15 +533,22 @@ export class Engine {
       const deltaTime = Math.min(rawDeltaTime, this.config.maxDeltaTime)
 
       if (this.config.fixedTimeStep) {
-        // Fixed timestep with interpolation
+        // Fixed timestep with interpolation (accumulator pattern). Logic runs
+        // at the simulation tick rate; render can run faster and interpolate
+        // using getInterpolationAlpha().
+        const fixedDeltaMs = this.getClock().fixedDeltaMs
         this.accumulator += deltaTime
 
-        while (this.accumulator >= targetFrameTime) {
-          this.update(targetFrameTime)
-          this.accumulator -= targetFrameTime
+        // Guard against the spiral of death after a long stall.
+        const maxSteps = Math.ceil(this.config.maxDeltaTime / fixedDeltaMs) + 1
+        let steps = 0
+        while (this.accumulator >= fixedDeltaMs && steps < maxSteps) {
+          this.step()
+          this.accumulator -= fixedDeltaMs
+          steps++
         }
       } else {
-        // Variable timestep
+        // Variable timestep (non-deterministic legacy mode).
         this.update(deltaTime)
       }
     }

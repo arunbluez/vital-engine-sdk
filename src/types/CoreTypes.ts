@@ -70,6 +70,11 @@ export interface SystemUpdateContext {
    * Deterministic and platform-independent.
    */
   simTimeMs?: number
+  /**
+   * Input commands flushed for this tick (the only external mutation path into
+   * the simulation). Empty unless the world was advanced via `step()`.
+   */
+  inputCommands?: import('../input/InputCommand').InputCommand[]
 }
 
 export interface System {

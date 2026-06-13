@@ -547,3 +547,40 @@ class World {
 ```
 
 This architecture ensures clean separation of concerns, high performance, and maintainable code structure for game development.
+
+## Deterministic Simulation
+
+The engine is deterministic: `f(seed, configVersion, inputLog)` yields a
+bit-identical world state on any platform. See
+[DETERMINISM.md](./DETERMINISM.md) for the primitives (seeded `RandomService`,
+`SimulationClock`, `DMath`, `StateHasher`, `InputQueue`, replay system).
+
+### Fixed timestep
+
+Logic runs at a fixed tick rate (default 30/sec) decoupled from render. The
+deterministic core is `world.step()` / `engine.step()`; the browser loop
+(`engine.start()`) uses the accumulator pattern and exposes
+`engine.getInterpolationAlpha()` for render interpolation.
+
+### Canonical system order
+
+Systems execute in **insertion order**, which is deterministic. Register them
+in this canonical order (input first, cleanup last) so the simulation reads and
+writes state in a stable sequence:
+
+```
+1.  playerController   (input-apply — MOVE commands → velocity)
+2.  ai                 (decisions/targeting)
+3.  movement           (integrate velocity → position)
+4.  combat             (targeting, attacks, crit rolls)
+5.  collection         (pickups, magnets)
+6.  progression        (xp, levels)
+7.  economy            (drops, currency)
+8.  difficulty         (adaptive scaling)
+9.  spawner            (waves, enemy spawns)
+10. cleanup            (lifetime expiry, dead-entity removal)
+```
+
+Entity iteration within a system is by ascending entity id, and entity ids come
+from a per-world counter — both deterministic. This ordering is enforced by
+`tests/unit/SystemOrder.test.ts`.

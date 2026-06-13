@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: Lint, typecheck, test, determinism
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Determinism guardrails: fails if anyone reintroduces Math.random in src/.
+      - name: Determinism lint
+        run: npm run lint:determinism
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit & integration tests
+        run: npm run test:ci
+
+      # The headline guarantee: the same seed must print the same state hash.
+      - name: Determinism suite
+        run: npm run test:determinism
+
+      - name: Seed validation (simulate CLI)
+        run: npm run simulate -- --seed 42 --ticks 2700 --bot random
+
+  # Cross-environment proof (Node V8 vs WebKit/JSC) is the iOS-vs-Android
+  # canary. It needs Playwright browser binaries; wire it up here when the
+  # browser harness lands.
+  #
+  # cross-env:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with: { node-version: 20, cache: npm }
+  #     - run: npm ci
+  #     - run: npx playwright install webkit
+  #     - run: npm run test:crossenv

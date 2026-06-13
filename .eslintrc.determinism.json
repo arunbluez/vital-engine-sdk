@@ -1,0 +1,20 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "sourceType": "module"
+  },
+  "plugins": ["@typescript-eslint"],
+  "rules": {
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "Math",
+        "property": "random",
+        "message": "Math.random() is banned in src/ — it is unseedable and breaks determinism. Use the seeded RandomService."
+      }
+    ]
+  },
+  "ignorePatterns": ["dist", "node_modules", "coverage"]
+}

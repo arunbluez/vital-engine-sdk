@@ -47,6 +47,12 @@ export interface EngineConfig {
    * 30. Render can run faster with interpolation.
    */
   tickRate?: number
+  /**
+   * Game balance/config identifier. Determinism is `f(seed, configVersion,
+   * inputs)`: if balance values change, old replays diverge, so replays are
+   * gated on a matching configVersion. Defaults to '1.0.0'.
+   */
+  configVersion?: string
 }
 
 export interface GameConfig {

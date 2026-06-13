@@ -15,7 +15,7 @@ A headless game engine SDK for building Survivor.io-style survival action games.
 - **Platform Agnostic**: Works with any JavaScript frontend (Web, React Native, Unity WebGL)
 - **Zero Runtime Dependencies**: Lightweight and efficient
 - **TypeScript First**: Full type safety and excellent IDE support
-- **Deterministic**: Reproducible game states for debugging and replays
+- **Deterministic (verified)**: Given the same `(seed, configVersion, inputLog)`, the simulation produces a bit-identical state hash on any platform — verified by the [determinism test suite](./docs/DETERMINISM.md) in CI. Powers seeded RNG, fixed-timestep stepping, a tick-stamped input queue, and a full [replay system](./docs/REPLAY_FORMAT.md).
 
 https://github.com/user-attachments/assets/b7bcf389-6998-432d-a985-d624fd1cedbc.mp4
 
@@ -33,6 +33,8 @@ For detailed documentation, examples, and guides, visit our [Documentation](./do
 
 - [Quick Start Guide](./docs/QUICK_START.md)
 - [Architecture Overview](./docs/ARCHITECTURE_OVERVIEW.md)
+- [Determinism](./docs/DETERMINISM.md)
+- [Replay Format](./docs/REPLAY_FORMAT.md)
 - [API Reference](./docs/API_REFERENCE.md)
 - [Game Development Guide](./docs/GAME_DEVELOPMENT_GUIDE.md)
 - [Frontend Integration](./docs/FRONTEND_INTEGRATION.md)
@@ -41,12 +43,17 @@ For detailed documentation, examples, and guides, visit our [Documentation](./do
 ## Quick Start
 
 ```typescript
-import { Engine, Entity, Component, System, World } from 'vital-engine-sdk'
+import {
+  Engine,
+  TransformComponent,
+  HealthComponent,
+  MovementSystem,
+  CombatSystem,
+} from 'vital-engine-sdk'
 
-// Create the game engine
+// Create the game engine with a deterministic seed
 const engine = new Engine({
-  targetFPS: 60,
-  fixedTimeStep: true,
+  engine: { seed: 20260613, tickRate: 30, fixedTimeStep: true },
 })
 
 // Access the ECS world
@@ -54,22 +61,42 @@ const world = engine.getWorld()
 
 // Create an entity
 const player = world.createEntity()
-
-// Add components to the entity
-player.addComponent(new PositionComponent(0, 0))
+player.addComponent(new TransformComponent(0, 0))
 player.addComponent(new HealthComponent(100))
 
 // Add systems to process entities
-world.addSystem(new MovementSystem())
-world.addSystem(new CombatSystem())
+world.addSystem(new MovementSystem(engine.getEvents()))
+world.addSystem(new CombatSystem(engine.getEvents(), world, engine.getRandom('combat')))
 
-// Start the game loop
-engine.start()
+// Drive the simulation in fixed ticks (or call engine.start() in a browser)
+engine.stepN(300)
 
 // Listen for game events
 engine.getEvents().on('DAMAGE_DEALT', (event) => {
   console.log('Damage dealt:', event.data)
 })
+```
+
+### Determinism & replays
+
+```typescript
+import { ReplayRecorder, ReplayPlayer, ReplaySerializer } from 'vital-engine-sdk'
+
+const recorder = new ReplayRecorder(engine)
+recorder.start()
+engine.enqueueInput({ type: 'MOVE', dx: 1, dy: 0 }) // applied at the next tick
+engine.stepN(2700)
+const replay = recorder.stop()
+
+const url = ReplaySerializer.encode(replay)              // compact, URL-safe
+const { verified } = new ReplayPlayer(freshEngine, ReplaySerializer.decode(url)).runToEnd()
+```
+
+Validate a seed headlessly from the CLI:
+
+```bash
+npm run simulate -- --seed 42 --ticks 2700 --bot random
+# prints final stats + a state hash that is identical on any machine
 ```
 
 ## 🏗️ Architecture
@@ -102,11 +129,12 @@ The SDK follows an Entity-Component-System (ECS) architecture:
 
 ## 🚀 Features in Development
 
+- [x] **Deterministic simulation** (seeded RNG, fixed timestep, DMath, state hashing)
+- [x] **Replay system** (record, serialize to URL, headless verify)
 - [ ] Advanced AI behaviors
 - [ ] Procedural level generation
 - [ ] Multiplayer support
 - [ ] Save/Load system
-- [ ] Replay system
 - [ ] Advanced physics integration
 - [ ] More skill and weapon types
 - [ ] Boss encounters

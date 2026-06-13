@@ -1,6 +1,7 @@
 export { TransformComponent } from './Transform'
 export { HealthComponent } from './Health'
 export { MovementComponent } from './Movement'
+export { PlayerControllerComponent } from './PlayerController'
 export { CombatComponent, type WeaponStats } from './Combat'
 export { ExperienceComponent } from './Experience'
 export {

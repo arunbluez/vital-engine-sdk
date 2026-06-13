@@ -27,6 +27,32 @@ export type { HashableWorld, HashableEntity } from './core'
 // Deterministic math layer
 export { DMath } from './math'
 
+// Input command model & queue
+export {
+  InputQueue,
+  quantizeAxis,
+  INPUT_QUANTIZATION,
+  type InputCommand,
+  type InputCommandType,
+  type UnstampedInputCommand,
+  type MoveCommand,
+  type SkillPickCommand,
+  type PauseCommand,
+  type ResumeCommand,
+} from './input'
+
+// Replay system
+export {
+  ReplayRecorder,
+  ReplayPlayer,
+  ReplaySerializer,
+  REPLAY_MISMATCH_EVENT,
+  type ReplayData,
+} from './replay'
+
+// Versioning
+export { ENGINE_VERSION, REPLAY_FORMAT_VERSION } from './version'
+
 // Game systems
 export {
   MovementSystem,
@@ -41,6 +67,7 @@ export {
   CollectionSystem,
   SimpleCollectionSystem,
   DifficultySystem,
+  PlayerControllerSystem,
 } from './systems'
 
 // Components
@@ -48,6 +75,7 @@ export {
   TransformComponent,
   HealthComponent,
   MovementComponent,
+  PlayerControllerComponent,
   CombatComponent,
   ExperienceComponent,
   InventoryComponent,
